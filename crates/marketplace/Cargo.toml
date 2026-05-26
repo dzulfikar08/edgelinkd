@@ -1,0 +1,24 @@
+[package]
+name = "rust-red-marketplace"
+version = "0.1.0"
+edition = "2021"
+description = "WASM plugin marketplace backend for Rust-Red"
+
+[dependencies]
+axum = { workspace = true }
+tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros", "time", "fs", "sync"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+uuid = { workspace = true, features = ["v4", "serde"] }
+chrono = { workspace = true, features = ["serde"] }
+semver = { workspace = true, features = ["serde"] }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+log = { workspace = true }
+dashmap = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+wasmtime = { workspace = true }
+config = { workspace = true }
+postcard = { workspace = true }
+rmp-serde = { workspace = true }

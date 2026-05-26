@@ -11,7 +11,7 @@ use crate::runtime::flow::Flow;
 use crate::runtime::http_registry::HttpResponse;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]

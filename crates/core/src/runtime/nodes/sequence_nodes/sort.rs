@@ -1,9 +1,9 @@
 // Licensed under the Apache License, Version 2.0
-// Copyright EdgeLink contributors
+// Copyright Rust-Red contributors
 // Based on Node-RED 18-sort.js
 
 use async_trait::async_trait;
-use edgelink_macro::*;
+use rust_red_macro::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Number;
 use std::collections::HashMap;
@@ -160,58 +160,67 @@ impl FlowNodeBehavior for SortNode {
         while !stop_token.is_cancelled() {
             let cancel = stop_token.clone();
             with_uow(self.as_ref(), cancel.child_token(), |node, msg| async move {
-                let mut msg_guard = msg.write().await;
-                // reset
-                if msg_guard.get("reset").is_some() {
-                    let mut state = node.state.lock().await;
-                    state.pending.clear();
-                    state.pending_count = 0;
-                    return Ok(());
-                }
-                // Sort by msg.parts grouping
-                if let Some(Variant::Object(parts)) = msg_guard.get("parts") {
-                    let id = parts.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                    let _idx = parts.get("index").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
-                    let count = parts.get("count").and_then(|v| v.as_u64()).map(|v| v as usize);
-                    if !id.is_empty() {
+                {
+                    let msg_guard = msg.read().await;
+                    // reset
+                    if msg_guard.get("reset").is_some() {
+                        drop(msg_guard);
                         let mut state = node.state.lock().await;
-                        let seq_no = {
-                            state.seq += 1;
-                            state.seq
-                        };
-                        let group = state.pending.entry(id.clone()).or_insert_with(|| PendingGroup {
-                            count: None,
-                            msgs: Vec::new(),
-                            seq_no,
-                        });
-                        group.msgs.push(msg.clone());
-                        if let Some(c) = count {
-                            group.count = Some(c);
-                        }
-                        let should_sort = if let Some(c) = group.count { group.msgs.len() == c } else { false };
-
-                        if should_sort {
-                            let mut group = state.pending.remove(&id).unwrap();
-                            state.pending_count -= group.msgs.len();
-                            drop(state);
-                            let sorted = node.sort_group(&mut group).await;
-                            for m in sorted {
-                                let env = Envelope { port: 0, msg: MsgHandle::new(m) };
-                                node.fan_out_one(env, cancel.child_token()).await?;
-                            }
-                        }
+                        state.pending.clear();
+                        state.pending_count = 0;
                         return Ok(());
                     }
-                }
-                // Directly sort array properties
-                let target = node.config.target.as_str();
-                if let Some(Variant::Array(arr)) = msg_guard.get(target) {
-                    let mut arr = arr.clone();
-                    node.sort_array(&mut arr);
-                    msg_guard.set_nav(target, Variant::Array(arr), true)?;
-                    let env = Envelope { port: 0, msg: MsgHandle::new(msg_guard.clone()) };
-                    node.fan_out_one(env, cancel.child_token()).await?;
-                    return Ok(());
+                    // Sort by msg.parts grouping
+                    if let Some(Variant::Object(parts)) = msg_guard.get("parts") {
+                        let id = parts.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                        let _idx = parts.get("index").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+                        let count = parts.get("count").and_then(|v| v.as_u64()).map(|v| v as usize);
+                        if !id.is_empty() {
+                            drop(msg_guard);
+                            let mut state = node.state.lock().await;
+                            let seq_no = {
+                                state.seq += 1;
+                                state.seq
+                            };
+                            let should_sort = {
+                                let group = state.pending.entry(id.clone()).or_insert_with(|| PendingGroup {
+                                    count: None,
+                                    msgs: Vec::new(),
+                                    seq_no,
+                                });
+                                group.msgs.push(msg.clone());
+                                if let Some(c) = count {
+                                    group.count = Some(c);
+                                }
+                                if let Some(c) = group.count { group.msgs.len() == c } else { false }
+                            };
+                            state.pending_count += 1;
+
+                            if should_sort {
+                                let mut group = state.pending.remove(&id).unwrap();
+                                state.pending_count -= group.msgs.len();
+                                drop(state);
+                                let sorted = node.sort_group(&mut group).await;
+                                for m in sorted {
+                                    let env = Envelope { port: 0, msg: MsgHandle::new(m) };
+                                    node.fan_out_one(env, cancel.child_token()).await?;
+                                }
+                            }
+                            return Ok(());
+                        }
+                    }
+                    // Directly sort array properties
+                    let target = node.config.target.as_str();
+                    if let Some(Variant::Array(arr)) = msg_guard.get(target) {
+                        let mut arr = arr.clone();
+                        node.sort_array(&mut arr);
+                        drop(msg_guard);
+                        let mut cloned = msg.read().await.clone();
+                        cloned.set_nav(target, Variant::Array(arr), true)?;
+                        let env = Envelope { port: 0, msg: MsgHandle::new(cloned) };
+                        node.fan_out_one(env, cancel.child_token()).await?;
+                        return Ok(());
+                    }
                 }
                 Ok(())
             })

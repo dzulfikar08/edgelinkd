@@ -2,6 +2,7 @@ use crate::handlers::WebState;
 use crate::models::*;
 use axum::{Extension, extract::Path, http::StatusCode, response::Json};
 use serde_json::Value;
+use std::collections::HashSet;
 use std::path::Path as StdPath;
 use std::sync::Arc;
 
@@ -81,14 +82,24 @@ pub async fn post_flows(
     Extension(state): Extension<Arc<WebState>>,
     payload: String,
 ) -> Result<Json<Value>, StatusCode> {
-    log::debug!("Received raw POST payload: {payload}");
+    // Input size validation
+    let max_flow_size = state.red_settings.security.max_flow_size;
+    if payload.len() > max_flow_size {
+        log::warn!(
+            "Flow payload too large: {} bytes (max: {} bytes)",
+            payload.len(),
+            max_flow_size
+        );
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+
+    log::debug!("Received raw POST payload ({} bytes)", payload.len());
 
     // Try to parse the payload
     let parsed_payload: FlowsPayload = match serde_json::from_str(&payload) {
         Ok(p) => p,
         Err(e) => {
             log::error!("Failed to parse flows payload: {e}");
-            log::error!("Raw payload was: {payload}");
             return Err(StatusCode::BAD_REQUEST);
         }
     };
@@ -96,7 +107,44 @@ pub async fn post_flows(
     // TODO: Check/validate rev field - appears to be SHA256 hash but algorithm unknown
     log::debug!("Received deployment request with rev: {:?}", parsed_payload.rev);
     log::debug!("Received deployment request with {} flows", parsed_payload.flows.len());
-    log::debug!("Full payload: {parsed_payload:?}");
+
+    // Validate config_node references before deploying
+    if let Err(validation_errors) = validate_flow_config_nodes(&parsed_payload.flows) {
+        log::warn!("Deploy rejected: {} invalid config reference(s)", validation_errors.len());
+        state.comms.send_notification("warning", &format!(
+            "Deploy rejected: {} node(s) have invalid config references",
+            validation_errors.len()
+        )).await;
+        // Return validation error as JSON - client must handle HTTP 200 with error payload
+        // since Node-RED editor expects JSON response
+        return Ok(Json(serde_json::json!({
+            "error": "validation_failed",
+            "message": "Some nodes reference config nodes that don't exist in this flow",
+            "details": validation_errors
+        })));
+    }
+
+    // Versioning: snapshot current flows before overwriting
+    {
+        let versioning_config = &state.red_settings.versioning;
+        if versioning_config.enabled {
+            let flows_path_guard_v = state.flows_file_path.read().await;
+            if let Some(flows_path) = flows_path_guard_v.as_ref() {
+                if flows_path.exists() {
+                    match load_flows_from_file(flows_path).await {
+                        Ok(current_flows) if !current_flows.is_empty() => {
+                            let store = crate::versioning::FlowVersionStore::new(flows_path, versioning_config);
+                            if let Err(e) = store.save_version(&current_flows, None).await {
+                                log::warn!("Failed to save flow version snapshot: {e}");
+                            }
+                        }
+                        Ok(_) => {} // empty file, skip
+                        Err(e) => log::warn!("Failed to load current flows for versioning: {e}"),
+                    }
+                }
+            }
+        }
+    }
 
     // Save flows to file if path is available
     let flows_path_guard = state.flows_file_path.read().await;
@@ -286,6 +334,17 @@ pub async fn post_flow(
     Extension(state): Extension<Arc<WebState>>,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<Value>, StatusCode> {
+    // Input size validation
+    let payload_str = match serde_json::to_string(&payload) {
+        Ok(s) => s,
+        Err(_) => return Err(StatusCode::BAD_REQUEST),
+    };
+    let max_flow_size = state.red_settings.security.max_flow_size;
+    if payload_str.len() > max_flow_size {
+        log::warn!("Single flow payload too large: {} bytes (max: {} bytes)", payload_str.len(), max_flow_size);
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+
     let flows_path_guard = state.flows_file_path.read().await;
     let mut flows = if let Some(flows_path) = flows_path_guard.as_ref() {
         match load_flows_from_file(flows_path).await {
@@ -404,5 +463,52 @@ pub async fn delete_flow(
         Ok(StatusCode::NO_CONTENT)
     } else {
         Err(StatusCode::NOT_FOUND)
+    }
+}
+
+/// Validate that all config_node references point to existing nodes in the flow.
+/// Returns Ok(()) if valid, Err(Vec<error details>) if invalid.
+fn validate_flow_config_nodes(flows: &[Value]) -> Result<(), Vec<Value>> {
+    // Collect all node IDs present in the flow
+    let all_node_ids: HashSet<String> = flows
+        .iter()
+        .filter_map(|node| node.get("id").and_then(|v| v.as_str()).map(|s| s.to_string()))
+        .collect();
+
+    let mut errors = Vec::new();
+
+    for node in flows {
+        // Only check nodes that have a config_node field
+        if let Some(config_node_val) = node.get("configNode").or_else(|| node.get("config_node")) {
+            let config_id = match config_node_val.as_str() {
+                Some(s) => s,
+                None => continue,
+            };
+
+            // Empty string means not configured yet — allow deploy (node will show error at runtime)
+            if config_id.is_empty() {
+                continue;
+            }
+
+            // Check if the referenced config node exists in the flow
+            if !all_node_ids.contains(config_id) {
+                let node_id = node.get("id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let node_type = node.get("type").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let node_name = node.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                errors.push(serde_json::json!({
+                    "nodeId": node_id,
+                    "nodeType": node_type,
+                    "nodeName": node_name,
+                    "configNode": config_id,
+                    "error": format!("Config node '{}' not found in flow", config_id)
+                }));
+            }
+        }
+    }
+
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(errors)
     }
 }

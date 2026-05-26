@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use crate::runtime::flow::Flow;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 use runtime::engine::Engine;
 
 #[derive(Debug)]
-#[global_node("unknown.global", red_name = "unknown.global", module = "edgelink_core")]
+#[global_node("unknown.global", red_name = "unknown.global", module = "rust_red_core")]
 struct UnknownGlobalNode {
     base: BaseGlobalNodeState,
 }

@@ -9,7 +9,7 @@ use tokio_util::sync::CancellationToken;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::{with_uow, *};
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 // Helper function to deserialize string or number as f64
 fn deserialize_string_or_f64<'de, D>(deserializer: D) -> Result<f64, D::Error>
@@ -354,7 +354,7 @@ impl DelayNode {
         tokio::select! {
             _ = cancel.cancelled() => {
                 // Cancelled, don't send
-                Err(crate::EdgelinkError::TaskCancelled.into())
+                Err(crate::RustRedError::TaskCancelled.into())
             }
             _ = tokio::time::sleep(timeout) => {
                 // Send the message after delay
@@ -428,11 +428,11 @@ impl DelayNode {
             return self.fan_out_one(Envelope { port: 0, msg }, cancel).await;
         }
 
-        let timeout = Duration::from_millis((delay_value * 1000.0) as u64);
+        let timeout = Duration::from_millis(delay_value as u64);
 
         tokio::select! {
             _ = cancel.cancelled() => {
-                Err(crate::EdgelinkError::TaskCancelled.into())
+                Err(crate::RustRedError::TaskCancelled.into())
             }
             _ = tokio::time::sleep(timeout) => {
                 self.fan_out_one(Envelope { port: 0, msg }, cancel).await
@@ -492,7 +492,7 @@ impl DelayNode {
 
         tokio::select! {
             _ = cancel.cancelled() => {
-                Err(crate::EdgelinkError::TaskCancelled.into())
+                Err(crate::RustRedError::TaskCancelled.into())
             }
             _ = tokio::time::sleep(timeout) => {
                 self.fan_out_one(Envelope { port: 0, msg }, cancel).await

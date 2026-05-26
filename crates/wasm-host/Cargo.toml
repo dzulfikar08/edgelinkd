@@ -1,0 +1,22 @@
+[package]
+name = "rust-red-wasm-host"
+version = "0.1.0"
+edition = "2021"
+description = "WASM plugin host for Rust-Red (Node-RED compatible runtime)"
+
+[dependencies]
+rust-red-core = { path = "../core" }
+wasmtime = { workspace = true }
+rmp-serde = { workspace = true }
+postcard = { workspace = true }
+tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros", "time", "fs", "sync"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+notify = { workspace = true }
+sha2 = { workspace = true }
+dashmap = { workspace = true }
+anyhow = { workspace = true }
+log = { workspace = true }
+async-trait = { workspace = true }
+tokio-util = { workspace = true }
+config = { workspace = true }

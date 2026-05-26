@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use runtime::engine::Engine;
@@ -5,13 +6,21 @@ use runtime::registry::RegistryHandle;
 use tokio::sync::{Mutex, RwLock};
 use tokio_util::sync::CancellationToken;
 
-use edgelink_core::runtime::model::*;
-use edgelink_core::*;
+use rust_red_core::runtime::model::*;
+use rust_red_core::*;
 
 use crate::cliargs::CliArgs;
-use crate::env::EdgelinkEnv;
+use crate::env::RustRedEnv;
 use crate::flows::ensure_flows_file_exists;
 use crate::registry::create_registry;
+
+#[cfg(feature = "wasm_plugins")]
+use crate::registry::create_registry_with_plugins;
+#[cfg(feature = "wasm_plugins")]
+use rust_red_wasm_host::PluginManager;
+
+#[cfg(feature = "cluster")]
+use rust_red_cluster::{ClusterConfig, ClusterManager};
 
 // TODO move to debug.rs
 #[derive(Debug, Clone)]
@@ -20,26 +29,46 @@ pub struct MsgInjectionEntry {
     pub msg: MsgHandle,
 }
 
-#[derive(Debug)]
 pub struct App {
     _registry: RegistryHandle,
     engine: Arc<RwLock<Engine>>,
     msgs_to_inject: Mutex<Vec<MsgInjectionEntry>>,
     flows_path: String, // Store the resolved flows path
-    env: Arc<EdgelinkEnv>,
+    env: Arc<RustRedEnv>,
+    #[cfg(feature = "wasm_plugins")]
+    _plugin_manager: Option<PluginManager>,
+    #[cfg(feature = "cluster")]
+    cluster_manager: Option<Arc<ClusterManager>>,
 }
 
 impl App {
     pub async fn new(
         _elargs: Arc<CliArgs>,
-        env: Arc<EdgelinkEnv>,
+        env: Arc<RustRedEnv>,
         _flows_path: Option<String>,
-    ) -> edgelink_core::Result<Self> {
-        let reg = create_registry()?;
+    ) -> rust_red_core::Result<Self> {
+        #[cfg(not(feature = "wasm_plugins"))]
+        let reg = {
+            let reg = create_registry()?;
+            reg
+        };
+        #[cfg(not(feature = "wasm_plugins"))]
+        let _plugin_manager: Option<()> = None;
+
+        #[cfg(feature = "wasm_plugins")]
+        let (reg, _plugin_manager) = {
+            let plugin_dir = env.config.get_string("wasm_plugin_dir").ok().map(PathBuf::from);
+            match create_registry_with_plugins(plugin_dir).await {
+                Ok((r, pm)) => (r, pm),
+                Err(e) => {
+                    log::error!("Failed to create registry with WASM plugins: {e}, falling back to builtins");
+                    (create_registry()?, None)
+                }
+            }
+        };
 
         let msgs_to_inject = Vec::new();
 
-        // flows_path 只从 config 获取，已统一默认值
         let flows_path =
             env.config.get_string("flows_path").expect("Config must provide flows_path after normalization");
         ensure_flows_file_exists(&flows_path)?;
@@ -47,12 +76,41 @@ impl App {
         log::info!("Loading flows file: {flows_path}");
         let engine = Engine::with_flows_file(&reg, &flows_path, Some(env.config.clone())).await?;
 
+        // Initialize cluster if enabled
+        #[cfg(feature = "cluster")]
+        let cluster_manager = {
+            let cluster_cfg = match ClusterConfig::load(&env.config) {
+                Ok(c) => c,
+                Err(e) => {
+                    log::warn!("Failed to load cluster config: {e}, clustering disabled");
+                    ClusterConfig::default()
+                }
+            };
+            if cluster_cfg.enabled {
+                let cancel = CancellationToken::new();
+                let mgr = Arc::new(ClusterManager::new(cluster_cfg, cancel));
+                let bridge = rust_red_cluster::bridge::ClusterPartitionerBridge::new(
+                    mgr.partition_manager.clone(),
+                );
+                engine.set_cluster_partitioner(Arc::new(bridge));
+                Some(mgr)
+            } else {
+                None
+            }
+        };
+        #[cfg(not(feature = "cluster"))]
+        let cluster_manager: Option<()> = None;
+
         Ok(App {
             _registry: reg,
             engine: Arc::new(RwLock::new(engine)),
             msgs_to_inject: Mutex::new(msgs_to_inject),
             flows_path: flows_path.clone(),
             env,
+            #[cfg(feature = "wasm_plugins")]
+            _plugin_manager,
+            #[cfg(feature = "cluster")]
+            cluster_manager,
         })
     }
 
@@ -117,8 +175,14 @@ impl App {
         &self.engine
     }
 
-    pub fn env(&self) -> &Arc<EdgelinkEnv> {
+    pub fn env(&self) -> &Arc<RustRedEnv> {
         &self.env
+    }
+
+    /// Get the cluster manager (if clustering is enabled)
+    #[cfg(feature = "cluster")]
+    pub fn cluster_manager(&self) -> &Option<Arc<ClusterManager>> {
+        &self.cluster_manager
     }
 
     /// Restart the flow engine with updated flows from file

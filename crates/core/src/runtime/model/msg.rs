@@ -329,8 +329,8 @@ impl<'js> js::FromJs<'js> for Msg {
                                 }
                             },
                             Err(e) => {
-                                log::error!("Error occurred: {e:?}");
-                                unreachable!();
+                                log::error!("Property iteration error in Msg::from_js: {e:?}");
+                                return Err(e);
                             }
                         }
                     }

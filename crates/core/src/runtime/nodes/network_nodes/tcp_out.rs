@@ -11,7 +11,7 @@ use serde::Deserialize;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Default)]
 enum TcpOutMode {
@@ -73,7 +73,7 @@ impl TcpOutNode {
             Variant::String(s) => {
                 if self.config.base64 {
                     BASE64_STANDARD.decode(s).map_err(|e| {
-                        crate::EdgelinkError::InvalidOperation(format!("Invalid base64 payload: {e}")).into()
+                        crate::RustRedError::InvalidOperation(format!("Invalid base64 payload: {e}")).into()
                     })
                 } else {
                     Ok(s.as_bytes().to_vec())
@@ -88,19 +88,19 @@ impl TcpOutNode {
                             if b <= 255 {
                                 bytes.push(b as u8);
                             } else {
-                                return Err(crate::EdgelinkError::InvalidOperation(
+                                return Err(crate::RustRedError::InvalidOperation(
                                     "Array contains numbers > 255".to_string(),
                                 )
                                 .into());
                             }
                         } else {
-                            return Err(crate::EdgelinkError::InvalidOperation(
+                            return Err(crate::RustRedError::InvalidOperation(
                                 "Array contains non-integer numbers".to_string(),
                             )
                             .into());
                         }
                     } else {
-                        return Err(crate::EdgelinkError::InvalidOperation(
+                        return Err(crate::RustRedError::InvalidOperation(
                             "Array contains non-numeric items".to_string(),
                         )
                         .into());
@@ -132,7 +132,7 @@ impl TcpOutNode {
 
         if port == 0 {
             return Err(
-                crate::EdgelinkError::InvalidOperation("Port must be specified for client mode".to_string()).into()
+                crate::RustRedError::InvalidOperation("Port must be specified for client mode".to_string()).into()
             );
         }
 
@@ -153,7 +153,7 @@ impl TcpOutNode {
                         stream_arc
                     }
                     Err(e) => {
-                        return Err(crate::EdgelinkError::InvalidOperation(format!(
+                        return Err(crate::RustRedError::InvalidOperation(format!(
                             "Failed to connect to {remote_addr}: {e}"
                         ))
                         .into());
@@ -169,7 +169,7 @@ impl TcpOutNode {
                 // Remove failed connection
                 let mut connections = self.connections.lock().await;
                 connections.remove(&connection_key);
-                return Err(crate::EdgelinkError::InvalidOperation(format!("Failed to send data: {e}")).into());
+                return Err(crate::RustRedError::InvalidOperation(format!("Failed to send data: {e}")).into());
             }
 
             if let Err(e) = stream.flush().await {

@@ -1,5 +1,5 @@
 // Licensed under the Apache License, Version 2.0
-// Copyright EdgeLink contributors
+// Copyright Rust-Red contributors
 // Based on Node-RED 70-CSV.js CSV node
 
 //! CSV Parser Node
@@ -43,7 +43,7 @@ use serde_json::Number;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Default)]
 enum CsvOutputMode {
@@ -271,7 +271,7 @@ impl CsvNode {
     /// Convert objects/arrays to CSV string
     async fn objects_to_csv(&self, msg: &Msg) -> crate::Result<Variant> {
         let payload =
-            msg.get("payload").ok_or_else(|| crate::EdgelinkError::invalid_operation("No payload to convert"))?;
+            msg.get("payload").ok_or_else(|| crate::RustRedError::invalid_operation("No payload to convert"))?;
 
         let mut state = self.parse_state.lock().await;
 
@@ -289,7 +289,7 @@ impl CsvNode {
         let data_array = match payload {
             Variant::Array(arr) => arr.clone(),
             Variant::Object(_) => vec![payload.clone()],
-            _ => return Err(crate::EdgelinkError::invalid_operation("Payload must be object or array")),
+            _ => return Err(crate::RustRedError::invalid_operation("Payload must be object or array")),
         };
 
         let mut csv_lines = Vec::new();
@@ -384,7 +384,7 @@ impl CsvNode {
         let csv_string = msg
             .get("payload")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| crate::EdgelinkError::invalid_operation("Payload must be a string"))?;
+            .ok_or_else(|| crate::RustRedError::invalid_operation("Payload must be a string"))?;
 
         let mut state = self.parse_state.lock().await;
         let mut template = self.template.clone();

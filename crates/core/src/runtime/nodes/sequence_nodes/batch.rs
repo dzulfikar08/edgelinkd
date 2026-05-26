@@ -1,5 +1,5 @@
 // Licensed under the Apache License, Version 2.0
-// Copyright EdgeLink contributors
+// Copyright Rust-Red contributors
 // Based on Node-RED 19-batch.js
 
 use async_trait::async_trait;
@@ -9,11 +9,11 @@ use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tokio::time::{Duration, interval};
 
-use crate::EdgelinkError;
+use crate::RustRedError;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BatchNodeConfig {
@@ -114,7 +114,7 @@ impl BatchNode {
     }
 
     /// Set msg.parts for each message in the batch
-    async fn send_batch(&self, messages: Vec<MsgHandle>) -> Result<Vec<MsgHandle>, EdgelinkError> {
+    async fn send_batch(&self, messages: Vec<MsgHandle>) -> Result<Vec<MsgHandle>, RustRedError> {
         if messages.is_empty() {
             return Ok(vec![]);
         }
@@ -145,7 +145,7 @@ impl BatchNode {
     }
 
     /// Count mode: batch by count or end-of-sequence
-    async fn process_count_mode(&self, msg_handle: MsgHandle) -> Result<Vec<MsgHandle>, EdgelinkError> {
+    async fn process_count_mode(&self, msg_handle: MsgHandle) -> Result<Vec<MsgHandle>, RustRedError> {
         // Handle reset
         {
             let msg = msg_handle.read().await;
@@ -224,7 +224,7 @@ impl BatchNode {
     }
 
     /// Interval mode: batch by time interval
-    async fn process_interval_mode(&self, msg_handle: MsgHandle) -> Result<Vec<MsgHandle>, EdgelinkError> {
+    async fn process_interval_mode(&self, msg_handle: MsgHandle) -> Result<Vec<MsgHandle>, RustRedError> {
         // Handle reset
         {
             let msg = msg_handle.read().await;
@@ -260,7 +260,7 @@ impl BatchNode {
     }
 
     /// Concat mode: batch by topic and group id
-    async fn process_concat_mode(&self, msg_handle: MsgHandle) -> Result<Vec<MsgHandle>, EdgelinkError> {
+    async fn process_concat_mode(&self, msg_handle: MsgHandle) -> Result<Vec<MsgHandle>, RustRedError> {
         let (topic, group_id, has_parts) = {
             let msg = msg_handle.read().await;
 

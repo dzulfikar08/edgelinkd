@@ -9,7 +9,7 @@ use serde::Deserialize;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
@@ -217,11 +217,11 @@ impl HttpRequestNode {
                 url_str.to_string()
             } else {
                 log::error!("HTTP request: Invalid URL in message");
-                return Err(crate::EdgelinkError::BadArgument("url").into());
+                return Err(crate::RustRedError::BadArgument("url").into());
             }
         } else {
             log::error!("HTTP request: No URL provided");
-            return Err(crate::EdgelinkError::BadArgument("url").into());
+            return Err(crate::RustRedError::BadArgument("url").into());
         };
 
         // Validate URL
@@ -393,7 +393,7 @@ impl HttpRequestNode {
         let env_vars: std::collections::HashMap<String, String> = std::env::vars().collect();
         context_map = context_map
             .insert("env", &env_vars)
-            .map_err(|e| crate::EdgelinkError::invalid_operation(&format!("Template context error: {e}")))?;
+            .map_err(|e| crate::RustRedError::invalid_operation(&format!("Template context error: {e}")))?;
 
         Ok(context_map.build())
     }
@@ -410,7 +410,7 @@ impl HttpRequestNode {
 
         // Validate protocol
         if !url.starts_with("http://") && !url.starts_with("https://") {
-            return Err(crate::EdgelinkError::BadArgument("invalid protocol").into());
+            return Err(crate::RustRedError::BadArgument("invalid protocol").into());
         }
 
         // Basic URL encoding fixes for query parameters
@@ -550,7 +550,7 @@ impl HttpRequestNode {
                 }
                 Ok(params.join("&"))
             }
-            _ => Err(crate::EdgelinkError::BadArgument("payload must be object for query string").into()),
+            _ => Err(crate::RustRedError::BadArgument("payload must be object for query string").into()),
         }
     }
 

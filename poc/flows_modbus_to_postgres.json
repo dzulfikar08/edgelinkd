@@ -1,0 +1,92 @@
+[
+  {
+    "id": "a1b2c3d4e5f60001",
+    "label": "Modbus → PostgreSQL POC",
+    "type": "tab"
+  },
+  {
+    "id": "f1e2d3c4b5a60002",
+    "name": "Local Modbus",
+    "type": "modbus-config",
+    "host": "127.0.0.1",
+    "port": 5020,
+    "transport": "tcp",
+    "unitId": 1,
+    "timeoutMs": 5000
+  },
+  {
+    "id": "a1b2c3d4e5f60010",
+    "name": "Local PostgreSQL",
+    "type": "postgres-config",
+    "host": "127.0.0.1",
+    "port": 5432,
+    "dbname": "edgelinkd_poc",
+    "user": "postgres",
+    "password": "postgres",
+    "poolMaxSize": 5,
+    "connectTimeoutMs": 5000
+  },
+  {
+    "id": "a1b2c3d4e5f60020",
+    "name": "Read Sensors",
+    "type": "modbus read",
+    "configNode": "f1e2d3c4b5a60002",
+    "functionCode": "readHoldingRegisters",
+    "address": 0,
+    "quantity": 4,
+    "pollIntervalMs": 5000,
+    "wires": [
+      ["a1b2c3d4e5f60030"]
+    ],
+    "x": 200,
+    "y": 200,
+    "z": "a1b2c3d4e5f60001"
+  },
+  {
+    "id": "a1b2c3d4e5f60030",
+    "name": "Transform to SQL",
+    "type": "function",
+    "func": "let values = msg.payload;\nlet temp = (values[0] || 0) / 10;\nlet humidity = (values[1] || 0) / 10;\nlet pressure = values[2] || 0;\nlet status = values[3] || 0;\nmsg.query = \"INSERT INTO sensor_readings (temperature, humidity, pressure, status) VALUES ($1, $2, $3, $4)\";\nmsg.queryParams = [temp, humidity, pressure, status];\nmsg.modbus_data = { raw: values, temperature: temp, humidity: humidity, pressure: pressure, status: status };\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "wires": [
+      ["a1b2c3d4e5f60040", "a1b2c3d4e5f60050"]
+    ],
+    "x": 420,
+    "y": 200,
+    "z": "a1b2c3d4e5f60001"
+  },
+  {
+    "id": "a1b2c3d4e5f60040",
+    "name": "Insert to PostgreSQL",
+    "type": "postgres-query",
+    "config_node": "a1b2c3d4e5f60010",
+    "query": "INSERT INTO sensor_readings (temperature, humidity, pressure, status) VALUES ($1, $2, $3, $4)",
+    "timeoutMs": 10000,
+    "outputMode": "rows",
+    "wires": [
+      ["a1b2c3d4e5f60050"]
+    ],
+    "x": 680,
+    "y": 200,
+    "z": "a1b2c3d4e5f60001"
+  },
+  {
+    "id": "a1b2c3d4e5f60050",
+    "name": "Debug Output",
+    "type": "debug",
+    "active": true,
+    "tosidebar": true,
+    "console": true,
+    "tostatus": false,
+    "complete": "true",
+    "targetType": "full",
+    "statusType": "auto",
+    "statusVal": "",
+    "wires": [],
+    "x": 920,
+    "y": 280,
+    "z": "a1b2c3d4e5f60001"
+  }
+]

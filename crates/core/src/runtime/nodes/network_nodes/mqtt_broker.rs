@@ -1,5 +1,5 @@
 // Licensed under the Apache License, Version 2.0
-// Copyright EdgeLink contributors
+// Copyright Rust-Red contributors
 // Based on Node-RED 10-mqtt.js MQTT Broker Config node
 
 //! MQTT Broker Config Node
@@ -15,7 +15,7 @@ use std::sync::Arc;
 
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 use rumqttc::{AsyncClient, EventLoop, LastWill, MqttOptions, QoS, Transport};
 use std::collections::HashMap;
 use std::time::Duration;

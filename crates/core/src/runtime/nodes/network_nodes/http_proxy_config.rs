@@ -1,5 +1,5 @@
 // Licensed under the Apache License, Version 2.0
-// Copyright EdgeLink contributors
+// Copyright Rust-Red contributors
 // Based on Node-RED 06-httpproxy.js HTTP Proxy Config node
 
 //! HTTP Proxy Configuration Node
@@ -35,7 +35,7 @@ use url::Url;
 
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
@@ -121,13 +121,13 @@ impl HttpProxyConfigNode {
 
         // Parse proxy URL
         let proxy_url = Url::parse(&self.config.url)
-            .map_err(|e| crate::EdgelinkError::invalid_operation(&format!("Invalid proxy URL: {e}")))?;
+            .map_err(|e| crate::RustRedError::invalid_operation(&format!("Invalid proxy URL: {e}")))?;
 
         // Validate proxy scheme
         match proxy_url.scheme() {
             "http" | "https" | "socks5" => {}
             scheme => {
-                return Err(crate::EdgelinkError::invalid_operation(&format!(
+                return Err(crate::RustRedError::invalid_operation(&format!(
                     "Unsupported proxy scheme: {scheme}. Supported schemes: http, https, socks5"
                 )));
             }
@@ -239,7 +239,7 @@ impl HttpProxyConfigNode {
         target_url: &str,
     ) -> crate::Result<()> {
         if !self.valid {
-            return Err(crate::EdgelinkError::invalid_operation("Proxy configuration is invalid"));
+            return Err(crate::RustRedError::invalid_operation("Proxy configuration is invalid"));
         }
 
         if let Some(proxy_url) = self.get_proxy_url_for(target_url) {

@@ -4,18 +4,19 @@ use std::sync::Arc;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
-use edgelink_core::runtime::paths;
-use edgelink_web::server::WebServer;
+use rust_red_core::runtime::paths;
+use rust_red_core::runtime::telemetry::{TelemetryConfig, init_telemetry, shutdown_telemetry};
+use rust_red_web::server::WebServer;
 
 use crate::app::App;
 use crate::cliargs::{CliArgs, Commands};
 use crate::config::load_config;
 use crate::consts;
-use crate::env::EdgelinkEnv;
+use crate::env::RustRedEnv;
 use crate::logging;
 use crate::registry::list_available_nodes;
 
-pub async fn run_app(cli_args: Arc<CliArgs>) -> edgelink_core::Result<()> {
+pub async fn run_app(cli_args: Arc<CliArgs>) -> rust_red_core::Result<()> {
     match &cli_args.command {
         Some(Commands::Run { flows_path: _, headless: _, bind: _ }) => run_app_internal(cli_args.clone()).await,
         Some(Commands::List) => list_available_nodes().await,
@@ -24,9 +25,9 @@ pub async fn run_app(cli_args: Arc<CliArgs>) -> edgelink_core::Result<()> {
     }
 }
 
-pub async fn run_app_internal(cli_args: Arc<CliArgs>) -> edgelink_core::Result<()> {
+pub async fn run_app_internal(cli_args: Arc<CliArgs>) -> rust_red_core::Result<()> {
     if cli_args.verbose > 0 {
-        eprintln!("EdgeLinkd v{} - #{}\n", consts::APP_VERSION, consts::GIT_HASH);
+        eprintln!("Rust-Red v{} - #{}\n", consts::APP_VERSION, consts::GIT_HASH);
         eprintln!("Loading configuration...");
     }
 
@@ -37,11 +38,19 @@ pub async fn run_app_internal(cli_args: Arc<CliArgs>) -> edgelink_core::Result<(
         eprintln!("Logging sub-system initialized.\n");
     }
 
-    log::info!("EdgeLinkd Version={}-#{}", consts::APP_VERSION, consts::GIT_HASH);
+    // Initialise OpenTelemetry if configured (no-op when the `otel` feature is disabled)
+    let tel_cfg = TelemetryConfig::from_config(&cfg);
+    if tel_cfg.enabled {
+        if let Err(e) = init_telemetry(&tel_cfg) {
+            log::warn!("OpenTelemetry initialisation failed (tracing/metrics disabled): {e}");
+        }
+    }
+
+    log::info!("Rust-Red Version={}-#{}", consts::APP_VERSION, consts::GIT_HASH);
     log::info!("==========================================================\n");
 
     // Prepare the runtime environment (ensure flows file exists, etc.)
-    let env = Arc::new(EdgelinkEnv::new(cfg));
+    let env = Arc::new(RustRedEnv::new(cfg));
     env.prepare()?;
 
     // Create cancellation token for graceful shutdown
@@ -54,11 +63,23 @@ pub async fn run_app_internal(cli_args: Arc<CliArgs>) -> edgelink_core::Result<(
         ctrl_c_token.cancel();
     });
 
-    log::info!("Starting EdgeLinkd run-time engine...");
+    log::info!("Starting Rust-Red run-time engine...");
     log::info!("Press CTRL+C to terminate.");
 
     // Create the App first to get flows data
     let app = Arc::new(App::new(cli_args.clone(), env, None).await?);
+
+    // Start cluster if enabled
+    #[cfg(feature = "cluster")]
+    {
+        if let Some(ref cm) = app.cluster_manager() {
+            cm.start().await?;
+        }
+    }
+
+    // Clone cluster manager for graceful shutdown
+    #[cfg(feature = "cluster")]
+    let cluster_mgr_for_shutdown = app.cluster_manager().clone();
 
     let headless = app.env().config.get_bool("headless").unwrap_or(false);
     use tokio::try_join;
@@ -76,6 +97,18 @@ pub async fn run_app_internal(cli_args: Arc<CliArgs>) -> edgelink_core::Result<(
 
     // 等待 cancel token 完成
     tokio::time::timeout(tokio::time::Duration::from_secs(10), cancel.cancelled()).await?;
+
+    // Gracefully leave the cluster
+    #[cfg(feature = "cluster")]
+    {
+        if let Some(cm) = cluster_mgr_for_shutdown {
+            cm.leave().await;
+        }
+    }
+
+    // Gracefully shut down OpenTelemetry providers (flushes pending data)
+    shutdown_telemetry();
+
     log::info!("Bye!");
 
     Ok(())
@@ -86,7 +119,7 @@ async fn start_web_server(
     app: Arc<App>,
     cfg: &config::Config,
     cancel: CancellationToken,
-) -> edgelink_core::Result<JoinHandle<()>> {
+) -> rust_red_core::Result<JoinHandle<()>> {
     // Determine static directory at runtime
     let static_dir = paths::ui_static_dir();
     log::info!("Using static directory: {}", static_dir.display());
@@ -116,6 +149,13 @@ async fn start_web_server(
         .await
         .with_engine(app.engine().clone(), cancel.clone())
         .await;
+
+    // Inject cluster manager into web server for API routes
+    #[cfg(feature = "cluster")]
+    let web_server = match app.cluster_manager().clone() {
+        Some(cm) => web_server.with_cluster_manager(cm),
+        None => web_server,
+    };
 
     let bind_addr = if let Ok(addr) = cfg.get_string("bind") {
         addr

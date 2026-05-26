@@ -7,7 +7,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{Html, IntoResponse, Json},
 };
-use edgelink_core::runtime::paths;
+use rust_red_core::runtime::paths;
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -34,8 +34,9 @@ pub async fn get_nodes(
     let accept_header = headers.get("accept").and_then(|h| h.to_str().ok()).unwrap_or("application/json");
 
     if accept_header.contains("text/html") {
-        // Return HTML config for all nodes
-        let html_content = generate_nodes_html().await;
+        // Return HTML config for all nodes, including custom Rust nodes from registry
+        let registry_guard = state.registry.read().await;
+        let html_content = generate_nodes_html_with_registry(registry_guard.as_ref()).await;
         Ok(Html(html_content).into_response())
     } else {
         // Return node list in JSON format - based on actual node registry
@@ -80,26 +81,29 @@ pub async fn get_nodes(
 }
 
 /// Generate HTML config for all nodes
-async fn generate_nodes_html() -> String {
+pub async fn generate_nodes_html_with_registry(registry: Option<&rust_red_core::runtime::registry::RegistryHandle>) -> String {
     // Dynamically generate node HTML at runtime - read and merge all HTML files under Node-RED node directory
     let node_red_nodes_dir = paths::ui_static_dir().join("nodes");
 
-    if !node_red_nodes_dir.exists() {
-        return get_fallback_nodes_html();
-    }
-
     let mut html_content = String::new();
 
-    // Handle core nodes
-    let core_dir = node_red_nodes_dir.join("core");
-    if core_dir.exists() {
-        process_node_directory_runtime(&core_dir, &mut html_content).await;
+    if node_red_nodes_dir.exists() {
+        // Handle core nodes
+        let core_dir = node_red_nodes_dir.join("core");
+        if core_dir.exists() {
+            process_node_directory_runtime(&core_dir, &mut html_content).await;
+        }
+
+        // Handle example nodes (if any)
+        let examples_dir = node_red_nodes_dir.join("examples");
+        if examples_dir.exists() {
+            process_node_directory_runtime(&examples_dir, &mut html_content).await;
+        }
     }
 
-    // Handle example nodes (if any)
-    let examples_dir = node_red_nodes_dir.join("examples");
-    if examples_dir.exists() {
-        process_node_directory_runtime(&examples_dir, &mut html_content).await;
+    // Generate editor definitions for custom Rust nodes not covered by static HTML
+    if let Some(reg) = registry {
+        html_content.push_str(&generate_custom_nodes_html(reg));
     }
 
     if html_content.is_empty() {
@@ -107,6 +111,449 @@ async fn generate_nodes_html() -> String {
     }
 
     html_content
+}
+
+/// Custom node types that lack static HTML files and need auto-generated templates
+const CUSTOM_NODE_TYPES: &[&str] = &[
+    "modbus-config", "modbus read", "modbus write",
+    "modbus-flex-getter", "modbus-flex-writer", "modbus-server",
+    "opcua-config", "opcua read", "opcua write",
+    "bacnet-config", "bacnet read", "bacnet write",
+];
+
+fn is_custom_node(module: &str, type_: &str) -> bool {
+    if module != "node-red" {
+        return true;
+    }
+    CUSTOM_NODE_TYPES.contains(&type_)
+}
+
+/// Generate HTML templates and RED.nodes.registerType() calls for custom nodes from the Rust registry
+fn generate_custom_nodes_html(registry: &rust_red_core::runtime::registry::RegistryHandle) -> String {
+    use rust_red_core::runtime::nodes::NodeKind;
+
+    let mut output = String::new();
+
+    for (_, meta) in registry.all().iter() {
+        if !is_custom_node(meta.module, meta.type_) {
+            continue;
+        }
+
+        let node_type = meta.type_;
+        let is_global = matches!(meta.kind, NodeKind::Global);
+
+        // Generate HTML edit form template
+        let template_html = get_node_template_html(node_type, is_global);
+        output.push_str(&format!(
+            "\n<script type=\"text/html\" data-template-name=\"{node_type}\">\n{template_html}</script>\n"
+        ));
+    }
+
+    // Generate JS registration block
+    output.push_str("\n<script type=\"text/javascript\">\n(function() {\n");
+
+    for (_, meta) in registry.all().iter() {
+        if !is_custom_node(meta.module, meta.type_) {
+            continue;
+        }
+
+        let node_type = meta.type_;
+        let red_name = meta.red_name;
+        let is_global = matches!(meta.kind, NodeKind::Global);
+
+        let (category, color, inputs, outputs, icon, defaults, align) = get_node_editor_config(node_type, is_global);
+
+        output.push_str(&format!(
+            "    RED.nodes.registerType('{node_type}', {{\n\
+             \x20       category: '{category}',\n\
+             \x20       color: '{color}',\n\
+             \x20       defaults: {{\n{defaults}\
+             \x20       }},\n\
+             \x20       inputs: {inputs},\n\
+             \x20       outputs: {outputs},\n\
+             \x20       icon: \"{icon}\",\n\
+             \x20       align: \"{align}\",\n\
+             \x20       label: function() {{ return this.name || \"{red_name}\"; }},\n\
+             \x20       oneditprepare: function() {{}},\n\
+             \x20       oneditsave: function() {{}}\n\
+             \x20   }});\n\n",
+        ));
+    }
+
+    output.push_str("})();\n</script>\n");
+    output
+}
+
+/// Generate the <script type="text/html" data-template-name> form HTML for a node type
+fn get_node_template_html(type_name: &str, is_global: bool) -> String {
+    if is_global {
+        get_global_node_template_html(type_name)
+    } else {
+        get_flow_node_template_html(type_name)
+    }
+}
+
+fn form_row(icon: &str, label: &str, input_id: &str, placeholder: &str) -> String {
+    format!(
+        "    <div class=\"form-row\">\n\
+         \x20       <label for=\"{input_id}\"><i class=\"fa fa-{icon}\"></i> {label}</label>\n\
+         \x20       <input type=\"text\" id=\"{input_id}\" placeholder=\"{placeholder}\">\n\
+         \x20   </div>\n"
+    )
+}
+
+fn form_row_password(icon: &str, label: &str, input_id: &str) -> String {
+    format!(
+        "    <div class=\"form-row\">\n\
+         \x20       <label for=\"{input_id}\"><i class=\"fa fa-{icon}\"></i> {label}</label>\n\
+         \x20       <input type=\"password\" id=\"{input_id}\" placeholder=\"\">\n\
+         \x20   </div>\n"
+    )
+}
+
+fn form_row_number(icon: &str, label: &str, input_id: &str, placeholder: &str) -> String {
+    format!(
+        "    <div class=\"form-row\">\n\
+         \x20       <label for=\"{input_id}\"><i class=\"fa fa-{icon}\"></i> {label}</label>\n\
+         \x20       <input type=\"number\" id=\"{input_id}\" placeholder=\"{placeholder}\" style=\"width:100px;\">\n\
+         \x20   </div>\n"
+    )
+}
+
+fn form_row_textarea(icon: &str, label: &str, input_id: &str, placeholder: &str) -> String {
+    format!(
+        "    <div class=\"form-row\">\n\
+         \x20       <label for=\"{input_id}\"><i class=\"fa fa-{icon}\"></i> {label}</label>\n\
+         \x20       <textarea id=\"{input_id}\" rows=\"6\" placeholder=\"{placeholder}\" style=\"width:100%;\"></textarea>\n\
+         \x20   </div>\n"
+    )
+}
+
+fn form_row_config_node(_config_type: &str, label: &str) -> String {
+    format!(
+        "    <div class=\"form-row\">\n\
+         \x20       <label for=\"node-input-config_node\"><i class=\"fa fa-database\"></i> {label}</label>\n\
+         \x20       <input type=\"text\" id=\"node-input-config_node\" style=\"width:60%\">\n\
+         \x20   </div>\n"
+    )
+}
+
+fn name_row() -> String {
+    form_row("tag", "Name", "node-input-name", "")
+}
+
+fn get_flow_node_template_html(type_name: &str) -> String {
+    let mut html = String::new();
+
+    match type_name {
+        "postgres-query" | "sqlite-query" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row_config_node(type_name, "Server"));
+            html.push_str(&form_row_textarea("file-code-o", "Query", "node-input-query", "SELECT * FROM table"));
+            html.push_str(&form_row_number("clock-o", "Timeout (ms)", "node-input-timeout_ms", "30000"));
+            html.push_str(&form_row("cog", "Output Mode", "node-input-output_mode", "rows"));
+        }
+        "timescaledb-query" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row_config_node(type_name, "Server"));
+            html.push_str(&form_row_textarea("file-code-o", "Query", "node-input-query", "SELECT * FROM table"));
+            html.push_str(&form_row_number("clock-o", "Timeout (ms)", "node-input-timeout_ms", "30000"));
+        }
+        "mssql-query" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row_config_node(type_name, "Server"));
+            html.push_str(&form_row_textarea("file-code-o", "Query", "node-input-query", "SELECT * FROM table"));
+            html.push_str(&form_row_number("clock-o", "Timeout (ms)", "node-input-timeout_ms", "30000"));
+        }
+        "influxdb-in" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row_config_node(type_name, "Server"));
+            html.push_str(&form_row("edit", "Measurement", "node-input-measurement", "measurement"));
+            html.push_str(&form_row("tags", "Tags (JSON)", "node-input-tag_columns", "{\"host\":\"server1\"}"));
+            html.push_str(&form_row("list", "Fields (JSON)", "node-input-field_columns", "{\"value\":42}"));
+            html.push_str(&form_row("clock-o", "Timestamp column", "node-input-timestamp_column", "time"));
+        }
+        "influxdb-out" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row_config_node(type_name, "Server"));
+            html.push_str(&form_row_textarea("file-code-o", "Query", "node-input-query", "from(bucket: \"...\")"));
+            html.push_str(&form_row_number("clock-o", "Timeout (ms)", "node-input-timeout_ms", "30000"));
+        }
+        "modbus read" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row_config_node(type_name, "Server"));
+            html.push_str(&form_row("cog", "Function Code", "node-input-functionCode", "readHoldingRegisters"));
+            html.push_str(&form_row_number("map-marker", "Address", "node-input-address", "0"));
+            html.push_str(&form_row_number("bars", "Quantity", "node-input-quantity", "1"));
+            html.push_str(&form_row("cog", "Data Type", "node-input-dataType", "uint16"));
+            html.push_str(&form_row_number("clock", "Poll Interval (ms)", "node-input-pollIntervalMs", "5000"));
+        }
+        "modbus write" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row_config_node(type_name, "Server"));
+            html.push_str(&form_row("cog", "Function Code", "node-input-functionCode", "writeSingleRegister"));
+            html.push_str(&form_row_number("map-marker", "Address", "node-input-address", "0"));
+            html.push_str(&form_row("cog", "Data Type", "node-input-dataType", "uint16"));
+        }
+        "modbus-flex-getter" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row_config_node(type_name, "Server"));
+            html.push_str(&form_row("cog", "Data Type", "node-input-dataType", "uint16"));
+        }
+        "modbus-flex-writer" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row_config_node(type_name, "Server"));
+            html.push_str(&form_row("cog", "Data Type", "node-input-dataType", "uint16"));
+        }
+        "opcua read" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row_config_node(type_name, "Server"));
+            html.push_str(&form_row("crosshairs", "Node ID", "node-input-node_id", "ns=2;s=Temperature"));
+        }
+        "opcua write" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row_config_node(type_name, "Server"));
+            html.push_str(&form_row("crosshairs", "Node ID", "node-input-node_id", "ns=2;s=Setpoint"));
+        }
+        "bacnet read" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row_config_node(type_name, "Server"));
+            html.push_str(&form_row_number("map-marker", "Address", "node-input-address", "0"));
+            html.push_str(&form_row_number("bars", "Quantity", "node-input-quantity", "1"));
+        }
+        "bacnet write" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row_config_node(type_name, "Server"));
+            html.push_str(&form_row_number("map-marker", "Address", "node-input-address", "0"));
+        }
+        _ => {
+            // Generic template with just name
+            html.push_str(&name_row());
+        }
+    }
+
+    html
+}
+
+fn get_global_node_template_html(type_name: &str) -> String {
+    let mut html = String::new();
+
+    match type_name {
+        "postgres-config" | "timescaledb-config" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row("server", "Host", "node-input-host", "localhost"));
+            html.push_str(&form_row_number("cog", "Port", "node-input-port", "5432"));
+            html.push_str(&form_row("database", "Database", "node-input-dbname", "mydb"));
+            html.push_str(&form_row("user", "User", "node-input-user", "postgres"));
+            html.push_str(&form_row_password("lock", "Password", "node-input-password"));
+            html.push_str(&form_row_number("cog", "Pool Size", "node-input-poolMaxSize", "10"));
+            html.push_str(&form_row_number("clock", "Connect Timeout (ms)", "node-input-connectTimeoutMs", "5000"));
+        }
+        "sqlite-config" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row("file", "Database path", "node-input-path", "data.db"));
+        }
+        "mssql-config" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row("server", "Host", "node-input-host", "localhost"));
+            html.push_str(&form_row_number("cog", "Port", "node-input-port", "1433"));
+            html.push_str(&form_row("database", "Database", "node-input-database", "mydb"));
+            html.push_str(&form_row("user", "User", "node-input-user", "sa"));
+            html.push_str(&form_row_password("lock", "Password", "node-input-password"));
+        }
+        "influxdb-config" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row("globe", "URL", "node-input-url", "http://localhost:8086"));
+            html.push_str(&form_row_password("key", "Token", "node-input-token"));
+            html.push_str(&form_row("cog", "Organization", "node-input-org", "my-org"));
+            html.push_str(&form_row("database", "Bucket", "node-input-bucket", "my-bucket"));
+        }
+        "modbus-config" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row("server", "Host", "node-input-host", "localhost"));
+            html.push_str(&form_row_number("cog", "Port", "node-input-port", "502"));
+            html.push_str(&form_row("exchange", "Transport", "node-input-transport", "tcp"));
+            html.push_str(&form_row_number("cog", "Unit ID", "node-input-unitId", "1"));
+            html.push_str(&form_row_number("clock", "Timeout (ms)", "node-input-timeoutMs", "5000"));
+        }
+        "modbus-server" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row("server", "Host", "node-input-host", "127.0.0.1"));
+            html.push_str(&form_row_number("cog", "Port", "node-input-port", "5020"));
+            html.push_str(&form_row_number("bars", "Coil Count", "node-input-coilCount", "100"));
+            html.push_str(&form_row_number("bars", "Register Count", "node-input-registerCount", "100"));
+        }
+        "opcua-config" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row("globe", "Endpoint", "node-input-endpoint", "opc.tcp://localhost:4840"));
+        }
+        "bacnet-config" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row_number("cog", "Device ID", "node-input-device_id", "0"));
+            html.push_str(&form_row("server", "Target Host", "node-input-target_host", ""));
+            html.push_str(&form_row_number("cog", "Target Port", "node-input-target_port", "47808"));
+        }
+        _ => {
+            // Generic config template
+            html.push_str(&name_row());
+        }
+    }
+
+    html
+}
+
+/// Get full editor config for a node type: (category, color, inputs, outputs, icon, defaults_js, align)
+fn get_node_editor_config(type_name: &str, is_global: bool) -> (&'static str, &'static str, usize, usize, &'static str, String, &'static str) {
+    if is_global {
+        let defaults = get_global_node_defaults(type_name);
+        return ("config", "#C0DEED", 0, 0, "cog.svg", defaults, "");
+    }
+
+    let (cat, color, icon) = categorize_node_v2(type_name);
+    let defaults = get_flow_node_defaults(type_name);
+    (cat, color, 1, 1, icon, defaults, "left")
+}
+
+fn categorize_node_v2(type_name: &str) -> (&'static str, &'static str, &'static str) {
+    match type_name {
+        t if t.contains("mqtt") => ("network", "#c1975b", "bridge.svg"),
+        t if t.contains("postgres") || t.contains("timescale") => ("storage", "#e2d96e", "db.svg"),
+        t if t.contains("mssql") || t.contains("sqlite") => ("storage", "#e2d96e", "db.svg"),
+        t if t.contains("influxdb") => ("storage", "#dbc08e", "db.svg"),
+        t if t.contains("modbus") => ("modbus", "#E9967A", "serial.svg"),
+        t if t.contains("opcua") => ("storage", "#c1975b", "serial.svg"),
+        t if t.contains("bacnet") => ("storage", "#c1975b", "serial.svg"),
+        _ => ("function", "#a6bbcf", "function.svg"),
+    }
+}
+
+fn get_flow_node_defaults(type_name: &str) -> String {
+    let mut d = String::from("            name: {value:\"\"},\n");
+
+    // Map each flow node type to its config node type for the dropdown picker
+    let config_type = match type_name {
+        "postgres-query" => Some("postgres-config"),
+        "sqlite-query" => Some("sqlite-config"),
+        "mssql-query" => Some("mssql-config"),
+        "timescaledb-query" => Some("timescaledb-config"),
+        "influxdb-in" | "influxdb-out" => Some("influxdb-config"),
+        "modbus read" | "modbus write" | "modbus-flex-getter" | "modbus-flex-writer" => Some("modbus-config"),
+        "opcua read" | "opcua write" => Some("opcua-config"),
+        "bacnet read" | "bacnet write" => Some("bacnet-config"),
+        _ => None,
+    };
+
+    if let Some(ct) = config_type {
+        d.push_str(&format!(
+            "            config_node: {{value:\"\", type:\"{ct}\", required: true}},\n"
+        ));
+    }
+
+    match type_name {
+        "postgres-query" | "mssql-query" | "sqlite-query" => {
+            d.push_str("            query: {value:\"\", required: true},\n");
+            d.push_str("            timeout_ms: {value:30000},\n");
+            d.push_str("            output_mode: {value:\"rows\"},\n");
+        }
+        "timescaledb-query" => {
+            d.push_str("            query: {value:\"\", required: true},\n");
+            d.push_str("            timeout_ms: {value:30000},\n");
+        }
+        "influxdb-in" => {
+            d.push_str("            measurement: {value:\"\"},\n");
+            d.push_str("            tag_columns: {value:[]},\n");
+            d.push_str("            field_columns: {value:[]},\n");
+            d.push_str("            timestamp_column: {value:\"\"},\n");
+        }
+        "influxdb-out" => {
+            d.push_str("            query: {value:\"\", required: true},\n");
+            d.push_str("            timeout_ms: {value:30000},\n");
+        }
+        "modbus read" => {
+            d.push_str("            functionCode: {value:\"readHoldingRegisters\"},\n");
+            d.push_str("            address: {value:0},\n");
+            d.push_str("            quantity: {value:1},\n");
+            d.push_str("            dataType: {value:\"uint16\"},\n");
+            d.push_str("            pollIntervalMs: {value:5000},\n");
+        }
+        "bacnet read" => {
+            d.push_str("            address: {value:0},\n");
+            d.push_str("            quantity: {value:1},\n");
+        }
+        "modbus write" => {
+            d.push_str("            functionCode: {value:\"writeSingleRegister\"},\n");
+            d.push_str("            address: {value:0},\n");
+            d.push_str("            dataType: {value:\"uint16\"},\n");
+        }
+        "modbus-flex-getter" | "modbus-flex-writer" => {
+            d.push_str("            dataType: {value:\"uint16\"},\n");
+        }
+        "bacnet write" => {
+            d.push_str("            address: {value:0},\n");
+        }
+        "opcua read" | "opcua write" => {
+            d.push_str("            node_id: {value:\"\", required: true},\n");
+        }
+        _ => {}
+    }
+
+    d
+}
+
+fn get_global_node_defaults(type_name: &str) -> String {
+    let mut d = String::from("            name: {value:\"\"},\n");
+
+    match type_name {
+        "postgres-config" | "timescaledb-config" => {
+            d.push_str("            host: {value:\"localhost\"},\n");
+            d.push_str("            port: {value:5432},\n");
+            d.push_str("            dbname: {value:\"\"},\n");
+            d.push_str("            user: {value:\"\"},\n");
+            d.push_str("            password: {value:\"\"},\n");
+            d.push_str("            poolMaxSize: {value:10},\n");
+            d.push_str("            connectTimeoutMs: {value:5000},\n");
+        }
+        "sqlite-config" => {
+            d.push_str("            path: {value:\"data.db\"},\n");
+        }
+        "mssql-config" => {
+            d.push_str("            host: {value:\"localhost\"},\n");
+            d.push_str("            port: {value:1433},\n");
+            d.push_str("            database: {value:\"\"},\n");
+            d.push_str("            user: {value:\"\"},\n");
+            d.push_str("            password: {value:\"\"},\n");
+        }
+        "influxdb-config" => {
+            d.push_str("            url: {value:\"http://localhost:8086\"},\n");
+            d.push_str("            token: {value:\"\"},\n");
+            d.push_str("            org: {value:\"\"},\n");
+            d.push_str("            bucket: {value:\"\"},\n");
+        }
+        "modbus-config" => {
+            d.push_str("            host: {value:\"localhost\"},\n");
+            d.push_str("            port: {value:502},\n");
+            d.push_str("            transport: {value:\"tcp\"},\n");
+            d.push_str("            unitId: {value:1},\n");
+            d.push_str("            timeoutMs: {value:5000},\n");
+        }
+        "modbus-server" => {
+            d.push_str("            host: {value:\"127.0.0.1\"},\n");
+            d.push_str("            port: {value:5020},\n");
+            d.push_str("            coilCount: {value:100},\n");
+            d.push_str("            registerCount: {value:100},\n");
+        }
+        "opcua-config" => {
+            d.push_str("            endpoint: {value:\"opc.tcp://localhost:4840\"},\n");
+        }
+        "bacnet-config" => {
+            d.push_str("            device_id: {value:0},\n");
+            d.push_str("            target_host: {value:\"\"},\n");
+            d.push_str("            target_port: {value:47808},\n");
+        }
+        _ => {}
+    }
+
+    d
 }
 
 /// Recursively process node directory at runtime

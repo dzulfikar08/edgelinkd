@@ -1,4 +1,4 @@
-use crate::EdgelinkError;
+use crate::RustRedError;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -10,7 +10,7 @@ pub async fn delay(dur: Duration, cancel: CancellationToken) -> crate::Result<()
     tokio::select! {
         _ = cancel.cancelled() => {
             // 取消 sleep_task 任务
-            Err(EdgelinkError::TaskCancelled.into())
+            Err(RustRedError::TaskCancelled.into())
         }
         _ = tokio::time::sleep(dur)=> {
             // Long work has completed
@@ -35,7 +35,17 @@ pub trait SyncWaitableFuture: std::future::Future {
     {
         let handle = tokio::runtime::Handle::current();
         let task = handle.spawn(self);
-        tokio::task::block_in_place(|| tokio::runtime::Handle::current().block_on(task).unwrap())
+        tokio::task::block_in_place(|| match tokio::runtime::Handle::current().block_on(task) {
+            Ok(output) => output,
+            Err(e) => {
+                if e.is_panic() {
+                    std::panic::resume_unwind(e.into_panic())
+                } else {
+                    log::error!("SyncWaitableFuture::wait() task cancelled unexpectedly");
+                    panic!("SyncWaitableFuture::wait() failed: task was cancelled")
+                }
+            }
+        })
     }
 }
 

@@ -1,16 +1,17 @@
 // Licensed under the Apache License, Version 2.0
-// Copyright EdgeLink contributors
+// Copyright Rust-Red contributors
 // Based on Node-RED 17-split.js (JoinNode)
 
 use async_trait::async_trait;
 use serde::Deserialize;
 use std::collections::HashMap;
 use tokio::sync::Mutex;
+use tokio_util::sync::CancellationToken;
 
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -18,6 +19,7 @@ use edgelink_macro::*;
 enum JoinMode {
     #[default]
     Auto,
+    Custom,
     Array,
     Object,
     String,
@@ -51,10 +53,10 @@ struct JoinNodeConfig {
     #[serde(default)]
     count: RedOptionalUsize, // Expected count
 
-    #[serde(default)]
+    #[serde(default, rename = "joinChar")]
     join_char: Option<String>, // Delimiter for string join
 
-    #[serde(default)]
+    #[serde(default, rename = "keyProperty")]
     key_property: Option<String>, // Key property for object join
 
     #[serde(default)]
@@ -102,7 +104,7 @@ struct JoinNodeState {
 }
 
 #[derive(Debug)]
-#[flow_node("join", red_name = "split")]
+#[flow_node("join", red_name = "join")]
 pub struct JoinNode {
     base: BaseFlowNodeState,
     config: JoinNodeConfig,

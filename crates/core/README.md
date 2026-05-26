@@ -1,3 +1,3 @@
-# `edgelink_core`
+# `rust_red_core`
 
-The core code for EdgeLinkd project.
+The core code for Rust-Red project.

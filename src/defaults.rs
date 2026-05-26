@@ -27,7 +27,7 @@ pub fn create_default_flows_json() -> serde_json::Value {
         "once": false,
         "onceDelay": 0.1,
         "topic": "",
-        "payload": "Hello, EdgeLinkd!",
+        "payload": "Hello, Rust-Red!",
         "payloadType": "date",
         "x": 410,
         "y": 280,
@@ -57,12 +57,12 @@ pub fn create_default_flows_json() -> serde_json::Value {
     ])
 }
 
-/// Creates a default edgelinkd.toml configuration file
+/// Creates a default rust-red.toml configuration file
 pub fn create_default_config_file(config_dir: &str) -> Result<()> {
     use std::fs;
     use std::path::Path;
 
-    let config_path = Path::new(config_dir).join("edgelinkd.toml");
+    let config_path = Path::new(config_dir).join("rust-red.toml");
 
     // If config file already exists, nothing to do
     if config_path.exists() {
@@ -92,6 +92,28 @@ node_msg_queue_capacity = 16
 [ui-host]
 host = "127.0.0.1"
 port = 1888
+
+# Security settings (secure by default)
+# See docs/SECURITY.md for details
+[security]
+require_auth = true       # Require authentication (currently advisory)
+max_flow_size = 10485760  # Max flow JSON payload size in bytes (10 MB)
+rate_limit_rpm = 300      # Requests per minute per IP for admin API
+cors_origins = []         # Empty = same-origin only; ["*"] = allow all (insecure)
+security_headers = true   # Enable security response headers
+
+# Audit logging settings
+[audit]
+enabled = true            # Enable audit logging
+path = "./audit.log"      # Path to audit log file (JSONL format)
+max_file_size_mb = 100    # Rotate log file when it exceeds this size
+
+# OpenTelemetry observability (requires the `otel` feature flag at compile time)
+[telemetry]
+enabled = false           # Set to true to enable OTel export
+endpoint = "http://localhost:4317"  # OTLP gRPC endpoint
+service_name = "rust-red" # Logical service name in traces/metrics
+trace_ratio = 1.0         # Sampling ratio (0.0–1.0)
 "#;
 
     fs::write(&config_path, default_config)?;

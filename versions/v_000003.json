@@ -1,0 +1,73 @@
+[
+  {
+    "id": "adf5c374d9ac0466",
+    "label": "Flow 1",
+    "type": "tab"
+  },
+  {
+    "crontab": "",
+    "id": "ded1a8c84fec2323",
+    "name": "Inject Hello",
+    "once": false,
+    "onceDelay": 0.1,
+    "payload": "Hello, Rust-Red!",
+    "payloadType": "date",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "5",
+    "topic": "",
+    "type": "inject",
+    "wires": [
+      [
+        "4db7c4978083ac6c"
+      ]
+    ],
+    "x": 410,
+    "y": 280,
+    "z": "adf5c374d9ac0466"
+  },
+  {
+    "active": true,
+    "complete": "true",
+    "console": true,
+    "id": "dc18e4d63818b44b",
+    "name": "debug 1",
+    "statusType": "auto",
+    "statusVal": "",
+    "targetType": "full",
+    "tosidebar": true,
+    "tostatus": false,
+    "type": "debug",
+    "wires": [],
+    "x": 790,
+    "y": 280,
+    "z": "adf5c374d9ac0466"
+  },
+  {
+    "finalize": "",
+    "func": "let test = 123\nmsg.test = 123\nglobal.set(\"test\",test)\nflow.set(\"test\",test)\nreturn msg;",
+    "id": "4db7c4978083ac6c",
+    "initialize": "",
+    "libs": [],
+    "name": "function 1",
+    "noerr": 0,
+    "outputs": 1,
+    "timeout": 0,
+    "type": "function",
+    "wires": [
+      [
+        "dc18e4d63818b44b"
+      ]
+    ],
+    "x": 550,
+    "y": 280,
+    "z": "adf5c374d9ac0466"
+  }
+]

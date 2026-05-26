@@ -1,0 +1,45 @@
+[package]
+name = "rust-red-cluster"
+version = "0.1.99"
+edition = "2024"
+description = "Clustering and high-availability support for Rust-Red"
+authors = ["Li Wei <oldrev@gmail.com>"]
+license = "Apache 2.0"
+
+[lib]
+name = "rust_red_cluster"
+
+[dependencies]
+anyhow.workspace = true
+tokio = { workspace = true, features = [
+    "rt",
+    "rt-multi-thread",
+    "macros",
+    "time",
+    "net",
+    "sync",
+    "io-util",
+] }
+tokio-util.workspace = true
+log.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+chrono = { workspace = true, features = ["serde"] }
+uuid = { workspace = true, features = ["v4", "serde"] }
+thiserror.workspace = true
+rand.workspace = true
+dashmap.workspace = true
+futures.workspace = true
+axum.workspace = true
+bytes.workspace = true
+config.workspace = true
+
+rust-red-core = { path = "../core", default-features = false, features = ["core", "cluster"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+tempfile = "3"
+
+[features]
+default = []
+cluster = ["rust-red-core/cluster"]

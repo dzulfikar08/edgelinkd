@@ -1,0 +1,9 @@
+[package]
+name = "rust-red-wasm-sdk"
+version = "0.1.0"
+edition = "2021"
+description = "Guest SDK for writing Rust-Red WASM node plugins (no_std)"
+
+[dependencies]
+serde = { version = "1", default-features = false, features = ["derive", "alloc"] }
+postcard = { workspace = true }

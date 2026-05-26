@@ -1,0 +1,159 @@
+[
+  {
+    "id": "f100000000000001",
+    "label": "Benchmark Chain 10",
+    "type": "tab"
+  },
+  {
+    "id": "b100000000000001",
+    "name": "bench-inject",
+    "type": "inject",
+    "z": "f100000000000001",
+    "once": true,
+    "onceDelay": 0,
+    "payload": "benchmark",
+    "payloadType": "str",
+    "repeat": "",
+    "crontab": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "topic": "bench",
+    "wires": [
+      [
+        "d100000000000001"
+      ]
+    ]
+  },
+  {
+    "id": "d100000000000001",
+    "name": "pass-0",
+    "type": "dummy",
+    "z": "f100000000000001",
+    "wires": [
+      [
+        "d100000000000002"
+      ]
+    ]
+  },
+  {
+    "id": "d100000000000002",
+    "name": "pass-1",
+    "type": "dummy",
+    "z": "f100000000000001",
+    "wires": [
+      [
+        "d100000000000003"
+      ]
+    ]
+  },
+  {
+    "id": "d100000000000003",
+    "name": "pass-2",
+    "type": "dummy",
+    "z": "f100000000000001",
+    "wires": [
+      [
+        "d100000000000004"
+      ]
+    ]
+  },
+  {
+    "id": "d100000000000004",
+    "name": "pass-3",
+    "type": "dummy",
+    "z": "f100000000000001",
+    "wires": [
+      [
+        "d100000000000005"
+      ]
+    ]
+  },
+  {
+    "id": "d100000000000005",
+    "name": "pass-4",
+    "type": "dummy",
+    "z": "f100000000000001",
+    "wires": [
+      [
+        "d100000000000006"
+      ]
+    ]
+  },
+  {
+    "id": "d100000000000006",
+    "name": "pass-5",
+    "type": "dummy",
+    "z": "f100000000000001",
+    "wires": [
+      [
+        "d100000000000007"
+      ]
+    ]
+  },
+  {
+    "id": "d100000000000007",
+    "name": "pass-6",
+    "type": "dummy",
+    "z": "f100000000000001",
+    "wires": [
+      [
+        "d100000000000008"
+      ]
+    ]
+  },
+  {
+    "id": "d100000000000008",
+    "name": "pass-7",
+    "type": "dummy",
+    "z": "f100000000000001",
+    "wires": [
+      [
+        "d100000000000009"
+      ]
+    ]
+  },
+  {
+    "id": "d100000000000009",
+    "name": "pass-8",
+    "type": "dummy",
+    "z": "f100000000000001",
+    "wires": [
+      [
+        "d10000000000000a"
+      ]
+    ]
+  },
+  {
+    "id": "d10000000000000a",
+    "name": "pass-9",
+    "type": "dummy",
+    "z": "f100000000000001",
+    "wires": [
+      [
+        "e100000000000001"
+      ]
+    ]
+  },
+  {
+    "id": "e100000000000001",
+    "name": "bench-debug",
+    "type": "debug",
+    "z": "f100000000000001",
+    "active": true,
+    "console": true,
+    "tosidebar": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusType": "auto",
+    "statusVal": "",
+    "wires": []
+  }
+]

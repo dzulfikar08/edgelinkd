@@ -8,6 +8,7 @@ use sha2::{Digest, Sha256};
 use tokio_util::sync::CancellationToken;
 
 use super::context::{Context, ContextManager, ContextManagerBuilder};
+use super::dashboard_channel::DashboardChannel;
 use super::debug_channel::DebugChannel;
 use super::engine_events::{EngineEvent, EngineEventBus};
 use super::http_registry::HttpResponseRegistry;
@@ -69,14 +70,18 @@ struct InnerEngine {
     all_flow_nodes: DashMap<ElementId, Arc<dyn FlowNodeBehavior>>,
     http_response_registry: Arc<HttpResponseRegistry>,
     debug_channel: DebugChannel,
+    dashboard_channel: DashboardChannel,
     status_channel: StatusChannel,
     event_bus: EngineEventBus,
     flows_hash: tokio::sync::RwLock<Vec<u8>>,
 
-    #[cfg(any(test, feature = "pymod"))]
+    #[cfg(feature = "cluster")]
+    cluster_partitioner: std::sync::RwLock<Option<super::cluster_aware::ClusterPartitionerHandle>>,
+
+    #[cfg(any(test, feature = "pymod", feature = "internal-testing"))]
     final_msgs_rx: MsgUnboundedReceiverHolder,
 
-    #[cfg(any(test, feature = "pymod"))]
+    #[cfg(any(test, feature = "pymod", feature = "internal-testing"))]
     final_msgs_tx: MsgUnboundedSender,
 }
 
@@ -122,7 +127,7 @@ impl Engine {
         // let context_manager = Arc::new(ContextManager::default());
         let context = context_manager.new_global_context();
 
-        #[cfg(any(test, feature = "pymod"))]
+        #[cfg(any(test, feature = "pymod", feature = "internal-testing"))]
         let final_msgs_channel = tokio::sync::mpsc::unbounded_channel();
 
         // Calculate flows hash
@@ -142,14 +147,18 @@ impl Engine {
                 context,
                 http_response_registry: Arc::new(HttpResponseRegistry::new()),
                 debug_channel: DebugChannel::new(1000),
+                dashboard_channel: DashboardChannel::new(1000),
                 status_channel: StatusChannel::new(1000),
                 event_bus: EngineEventBus::new(100),
                 flows_hash: tokio::sync::RwLock::new(flows_hash.clone()),
 
-                #[cfg(any(test, feature = "pymod"))]
+                #[cfg(feature = "cluster")]
+                cluster_partitioner: std::sync::RwLock::new(None),
+
+                #[cfg(any(test, feature = "pymod", feature = "internal-testing"))]
                 final_msgs_rx: MsgUnboundedReceiverHolder::new(final_msgs_channel.1),
 
-                #[cfg(any(test, feature = "pymod"))]
+                #[cfg(any(test, feature = "pymod", feature = "internal-testing"))]
                 final_msgs_tx: final_msgs_channel.0,
             }),
         };
@@ -159,6 +168,12 @@ impl Engine {
 
         log::debug!("Loaded flow revision: {}", hex::encode(&flows_hash));
         Ok(engine)
+    }
+
+    /// Set the cluster flow partitioner for distributed flow execution.
+    #[cfg(feature = "cluster")]
+    pub fn set_cluster_partitioner(&self, partitioner: super::cluster_aware::ClusterPartitionerHandle) {
+        *self.inner.cluster_partitioner.write().unwrap() = Some(partitioner);
     }
 
     pub async fn with_flows_file(
@@ -197,7 +212,7 @@ impl Engine {
                 // register all nodes
                 for fnode in flow.get_all_flow_nodes().iter() {
                     if self.inner.all_flow_nodes.contains_key(&fnode.id()) {
-                        return Err(EdgelinkError::InvalidOperation(format!(
+                        return Err(RustRedError::InvalidOperation(format!(
                             "This flow node already existed: {fnode}"
                         ))
                         .into());
@@ -241,7 +256,7 @@ impl Engine {
             let global_node = match meta_node.factory {
                 NodeFactory::Global(factory) => factory(self, &global_config, settings)?,
                 _ => {
-                    return Err(EdgelinkError::NotSupported(format!(
+                    return Err(RustRedError::NotSupported(format!(
                         "Must be a global node: Node(id={0}, type='{1}')",
                         global_config.id, global_config.type_name
                     ))
@@ -265,7 +280,7 @@ impl Engine {
             flow.inject_msg(msg, cancel.clone()).await?;
             Ok(())
         } else {
-            Err(EdgelinkError::BadArgument("flow_id")).with_context(|| format!("Can not found flow_id: {flow_id}"))
+            Err(RustRedError::BadArgument("flow_id")).with_context(|| format!("Can not found flow_id: {flow_id}"))
         }
     }
 
@@ -280,7 +295,7 @@ impl Engine {
             flow.inject_msg(msg, cancel.clone()).await?;
             Ok(())
         } else {
-            Err(EdgelinkError::BadArgument("link_in_id"))
+            Err(RustRedError::BadArgument("link_in_id"))
                 .with_context(|| format!("Can not found `link id`: {link_in_id}"))
         }
     }
@@ -289,17 +304,31 @@ impl Engine {
         log::info!("-- Starting engine...");
         let mut shutdown_lock = self.inner.shutdown.try_write()?;
         if !(*shutdown_lock) {
-            return Err(EdgelinkError::invalid_operation("already started."));
+            return Err(RustRedError::invalid_operation("already started."));
         }
 
         if self.inner.flows.is_empty() {
-            return Err(EdgelinkError::invalid_operation("no flows loaded in the engine."));
+            return Err(RustRedError::invalid_operation("no flows loaded in the engine."));
         }
 
         // 发布启动开始事件
         self.publish_event(EngineEvent::EngineStarted);
 
         for f in self.inner.flows.iter() {
+            #[cfg(feature = "cluster")]
+            {
+                let partitioner_guard = self.inner.cluster_partitioner.read().unwrap();
+                if let Some(ref partitioner) = partitioner_guard.as_ref() {
+                    if partitioner.is_enabled() && !partitioner.owns_flow(&f.key().to_string()) {
+                        log::info!(
+                            "cluster: skipping flow {} (not assigned to node {})",
+                            f.key(),
+                            partitioner.local_node_id()
+                        );
+                        continue;
+                    }
+                }
+            }
             f.value().start().await?;
         }
 
@@ -312,7 +341,7 @@ impl Engine {
     pub async fn stop(&self) -> crate::Result<()> {
         let mut shutdown_lock = self.inner.shutdown.try_write()?;
         if *shutdown_lock {
-            return Err(EdgelinkError::invalid_operation("not started."));
+            return Err(RustRedError::invalid_operation("not started."));
         }
         log::info!("-- Stopping engine...");
 
@@ -332,7 +361,7 @@ impl Engine {
         Ok(())
     }
 
-    #[cfg(any(test, feature = "pymod"))]
+    #[cfg(any(test, feature = "pymod", feature = "internal-testing"))]
     pub async fn run_once_with_inject(
         &self,
         expected_msgs: usize,
@@ -372,11 +401,11 @@ impl Engine {
         match result {
             Ok(Ok(())) => Ok(received),
             Ok(Err(e)) => Err(e),
-            Err(_) => Err(EdgelinkError::Timeout.into()),
+            Err(_) => Err(RustRedError::Timeout.into()),
         }
     }
 
-    #[cfg(any(test, feature = "pymod"))]
+    #[cfg(any(test, feature = "pymod", feature = "internal-testing"))]
     pub async fn run_once(&self, expected_msgs: usize, timeout: std::time::Duration) -> crate::Result<Vec<Msg>> {
         self.run_once_with_inject(expected_msgs, timeout, Vec::with_capacity(0)).await
     }
@@ -408,7 +437,7 @@ impl Engine {
         } else if nfound == 0 {
             Ok(None)
         } else {
-            Err(EdgelinkError::InvalidOperation(format!("There are multiple global nodes with name '{name}'")).into())
+            Err(RustRedError::InvalidOperation(format!("There are multiple global nodes with name '{name}'")).into())
         }
     }
 
@@ -420,7 +449,7 @@ impl Engine {
     ) -> crate::Result<()> {
         let node = self
             .find_flow_node_by_id(flow_node_id)
-            .ok_or(EdgelinkError::BadArgument("flow_node_id"))
+            .ok_or(RustRedError::BadArgument("flow_node_id"))
             .with_context(|| format!("Cannot found the flow node, id='{flow_node_id}'"))?;
         node.inject_msg(msg, cancel).await
     }
@@ -447,6 +476,11 @@ impl Engine {
 
     pub fn debug_channel(&self) -> &DebugChannel {
         &self.inner.debug_channel
+    }
+
+    /// Access the dashboard data broadcast channel.
+    pub fn dashboard_channel(&self) -> &DashboardChannel {
+        &self.inner.dashboard_channel
     }
 
     pub fn status_channel(&self) -> &StatusChannel {
@@ -485,7 +519,7 @@ impl Engine {
         self.inner.event_bus.subscribe()
     }
 
-    #[cfg(any(test, feature = "pymod"))]
+    #[cfg(any(test, feature = "pymod", feature = "internal-testing"))]
     pub fn recv_final_msg(&self, msg: MsgHandle) -> crate::Result<()> {
         self.inner.final_msgs_tx.send(msg)?;
         Ok(())

@@ -1,5 +1,5 @@
 [package]
-name = "edgelink-web"
+name = "rust-red-web"
 version = "0.1.99"
 edition = "2024"
 
@@ -8,6 +8,7 @@ inventory.workspace = true
 axum.workspace = true
 tower = { version = "0.4", features = ["util"] }
 tower-http = { version = "0.6.6", features = ["fs", "cors"] }
+http = "1"
 
 tokio = { workspace = true, features = ["full"] }
 tokio-util = { workspace = true }
@@ -21,5 +22,18 @@ anyhow = { workspace = true }
 sha2 = { workspace = true }
 tokio-tungstenite = { workspace = true, optional = true, features = ["rustls-tls-native-roots"] }
 config = { workspace = true }
+base64 = { workspace = true }
+argon2 = "0.5"
+rand_core = { version = "0.6", features = ["std"] }
+password-hash = "0.5"
+thiserror = { workspace = true }
 
-edgelink-core = { path = "../core" }
+rust-red-core = { path = "../core" }
+rust-red-cluster = { path = "../cluster", optional = true }
+opentelemetry = { workspace = true, optional = true }
+
+[features]
+otel = ["dep:opentelemetry", "rust-red-core/otel"]
+auth = []
+ai = ["rust-red-core/ai"]
+cluster = ["dep:rust-red-cluster", "rust-red-cluster/cluster", "rust-red-core/cluster"]

@@ -8,3 +8,7 @@ __pycache__
 /static
 /flows.json
 /build-out
+
+# Frontend
+crates/frontend/node_modules
+crates/frontend/dist

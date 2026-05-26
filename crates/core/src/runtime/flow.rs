@@ -17,7 +17,7 @@ use super::engine::{Engine, WeakEngine};
 use super::group::{Group, GroupParent};
 use super::registry::RegistryHandle;
 use super::subflow::SubflowState;
-use crate::EdgelinkError;
+use crate::RustRedError;
 use crate::runtime::model::json::*;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
@@ -76,13 +76,13 @@ pub enum FlowKind {
 }
 
 impl std::str::FromStr for FlowKind {
-    type Err = EdgelinkError;
+    type Err = RustRedError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "tab" => Ok(FlowKind::GlobalFlow),
             "subflow" => Ok(FlowKind::Subflow),
-            _ => Err(EdgelinkError::BadArgument("s")),
+            _ => Err(RustRedError::BadArgument("s")),
         }
     }
 }
@@ -234,7 +234,7 @@ impl Flow {
             FlowKind::Subflow => {
                 if subflow_instance.is_none() {
                     return Err(
-                        EdgelinkError::BadFlowsJson("The ID of Sub-flow instance node is None".to_owned()).into()
+                        RustRedError::BadFlowsJson("The ID of Sub-flow instance node is None".to_owned()).into()
                     );
                 }
                 let subflow_instance = subflow_instance.as_ref().unwrap().clone();
@@ -306,7 +306,7 @@ impl Flow {
                 Some(parent_id) => Group::new_subgroup(
                     gc,
                     &self.inner.groups.get(parent_id).map(|x| x.value().clone()).ok_or(
-                        EdgelinkError::InvalidOperation(format!("cannot found parent group id `{parent_id}`")),
+                        RustRedError::InvalidOperation(format!("cannot found parent group id `{parent_id}`")),
                     )?,
                 )?,
 
@@ -366,7 +366,7 @@ impl Flow {
                                     let node_wire = PortWire { msg_sender: subflow_tx_port.msg_tx.clone() };
                                     node_port.wires.push(node_wire)
                                 } else {
-                                    return Err(EdgelinkError::BadFlowsJson(format!(
+                                    return Err(RustRedError::BadFlowsJson(format!(
                                         "Invalid port '{}' for subflow: {:?}",
                                         red_wire.port, subflow_state
                                     ))
@@ -392,7 +392,7 @@ impl Flow {
                     }
                 }
                 NodeFactory::Global(_) => {
-                    return Err(EdgelinkError::NotSupported(format!(
+                    return Err(RustRedError::NotSupported(format!(
                         "Must be a flow node: Node(id={0}, type='{1}')",
                         flow_config.id, flow_config.type_name
                     ))
@@ -483,7 +483,7 @@ impl Flow {
                         if !complete_nodes.iter().any(|x| x.id() == node.id()) {
                             complete_nodes.push(node.clone());
                         } else {
-                            return Err(EdgelinkError::InvalidOperation(format!(
+                            return Err(RustRedError::InvalidOperation(format!(
                                 "The connection of the {node} to the `complete` node already existed!"
                             ))
                             .into());
@@ -495,7 +495,7 @@ impl Flow {
             }
             Ok(())
         } else {
-            Err(EdgelinkError::BadFlowsJson(format!("CompleteNode has no 'scope' property: {node}")).into())
+            Err(RustRedError::BadFlowsJson(format!("CompleteNode has no 'scope' property: {node}")).into())
         }
     }
 
@@ -519,7 +519,7 @@ impl Flow {
         } else if nfound == 0 {
             Ok(None)
         } else {
-            Err(EdgelinkError::InvalidOperation(format!("There are multiple node with name '{name}'")).into())
+            Err(RustRedError::InvalidOperation(format!("There are multiple node with name '{name}'")).into())
         }
     }
 
@@ -544,6 +544,29 @@ impl Flow {
             log::info!("---- Starting Flow (id={})...", self.id());
         }
 
+        // Telemetry: trace flow deployment and track active flows.
+        // We store the span and end it manually to avoid holding a !Send ContextGuard
+        // across an await point.
+        #[cfg(feature = "otel")]
+        let mut _otel_span = {
+            use opentelemetry::trace::{Span, SpanKind, Tracer};
+            use opentelemetry::KeyValue;
+            let tracer = opentelemetry::global::tracer("rust-red");
+            tracer
+                .span_builder("flow_start")
+                .with_kind(SpanKind::Internal)
+                .with_attributes(vec![
+                    KeyValue::new("flow_id", self.id().to_string()),
+                    KeyValue::new("is_subflow", self.is_subflow()),
+                ])
+                .start(&tracer)
+        };
+
+        super::telemetry::record_flow_deployment();
+        if !self.is_subflow() {
+            super::telemetry::record_active_flows(1);
+        }
+
         if let Some(subflow_state) = &self.inner.subflow_state {
             log::info!("------ Starting the forward tasks of the subflow...");
             subflow_state.start_tx_tasks(self.inner.stop_token.clone()).await?;
@@ -551,6 +574,13 @@ impl Flow {
 
         {
             self.start_nodes(self.inner.stop_token.clone()).await?;
+        }
+
+        // End the OTel span for flow deployment (no-op when otel feature is off).
+        #[cfg(feature = "otel")]
+        {
+            use opentelemetry::trace::Span;
+            _otel_span.end();
         }
 
         Ok(())
@@ -561,6 +591,11 @@ impl Flow {
             log::info!("---- Stopping Subflow (id={})...", self.id());
         } else {
             log::info!("---- Stopping Flow (id={})...", self.id());
+        }
+
+        // Telemetry: decrement active flows gauge
+        if !self.is_subflow() {
+            super::telemetry::record_active_flows(-1);
         }
 
         self.inner.stop_token.cancel();
@@ -602,7 +637,7 @@ impl Flow {
 
             _ = cancel.cancelled() => {
                 // The token was cancelled
-                Err(EdgelinkError::TaskCancelled.into())
+                Err(RustRedError::TaskCancelled.into())
             }
         }
     }
@@ -621,7 +656,7 @@ impl Flow {
             }
             Ok(())
         } else {
-            Err(EdgelinkError::InvalidOperation("This is not a subflow!".into()).into())
+            Err(RustRedError::InvalidOperation("This is not a subflow!".into()).into())
         }
     }
 
@@ -641,7 +676,7 @@ impl Flow {
                 let node_in_flow = self.inner.nodes.get(nid).map(|x| x.value().clone());
                 // Next we find the node in the entire engine, otherwise there is an error
                 let node_in_engine = engine.find_flow_node_by_id(nid);
-                let node_entry = node_in_flow.or(node_in_engine).ok_or(EdgelinkError::InvalidOperation(format!(
+                let node_entry = node_in_flow.or(node_in_engine).ok_or(RustRedError::InvalidOperation(format!(
                     "[flow:{}] Referenced node not found [this_node.id='{}' this_node.name='{}', referenced_node.id='{}']",
                     self.name(), node_config.id, node_config.name, nid
                 )))?;
@@ -661,7 +696,7 @@ impl Flow {
             Some(gid) => match self.inner.groups.get(gid) {
                 Some(g) => Some(g.value().clone()),
                 None => {
-                    return Err(EdgelinkError::InvalidOperation(format!(
+                    return Err(RustRedError::InvalidOperation(format!(
                         "Can not found the group id in groups: id='{gid}'"
                     ))
                     .into());

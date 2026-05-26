@@ -1,9 +1,9 @@
 // Licensed under the Apache License, Version 2.0
-// Copyright EdgeLink contributors
+// Copyright Rust-Red contributors
 // Based on Node-RED 80-template.js
 
 use async_trait::async_trait;
-use edgelink_macro::*;
+use rust_red_macro::*;
 use mustache::{Data, MapBuilder};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -170,7 +170,7 @@ impl TemplateNode {
                     _ => {
                         // For complex types, serialize them and use serde_json directly
                         context_map = context_map.insert(key, value).map_err(|e| {
-                            crate::EdgelinkError::invalid_operation(&format!("Template context error: {e}"))
+                            crate::RustRedError::invalid_operation(&format!("Template context error: {e}"))
                         })?;
                         if is_json_output {
                             let json_escaped = serde_json::to_string(value).unwrap_or_else(|_| "null".to_string());
@@ -185,7 +185,7 @@ impl TemplateNode {
         let env_vars: std::collections::HashMap<String, String> = std::env::vars().collect();
         context_map = context_map
             .insert("env", &env_vars)
-            .map_err(|e| crate::EdgelinkError::invalid_operation(&format!("Template context error: {e}")))?;
+            .map_err(|e| crate::RustRedError::invalid_operation(&format!("Template context error: {e}")))?;
 
         Ok(context_map.build())
     }
@@ -201,11 +201,11 @@ impl TemplateNode {
 
         // Use mustache::compile and render
         let template = mustache::compile_str(template_str)
-            .map_err(|e| crate::EdgelinkError::invalid_operation(&format!("Template compilation error: {e}")))?;
+            .map_err(|e| crate::RustRedError::invalid_operation(&format!("Template compilation error: {e}")))?;
 
         let result = template
             .render_data_to_string(&context)
-            .map_err(|e| crate::EdgelinkError::invalid_operation(&format!("Template rendering error: {e}")))?;
+            .map_err(|e| crate::RustRedError::invalid_operation(&format!("Template rendering error: {e}")))?;
         Ok(result)
     }
 
@@ -214,19 +214,19 @@ impl TemplateNode {
         match self.config.output {
             TemplateOutputType::Json => {
                 let json_value: serde_json::Value = serde_json::from_str(&rendered)
-                    .map_err(|e| crate::EdgelinkError::invalid_operation(&format!("JSON parsing error: {e}")))?;
+                    .map_err(|e| crate::RustRedError::invalid_operation(&format!("JSON parsing error: {e}")))?;
                 Ok(Variant::from(json_value))
             }
             TemplateOutputType::Yaml => {
                 #[cfg(feature = "nodes_yaml")]
                 {
                     let yaml_value: serde_json::Value = serde_yaml_ng::from_str(&rendered)
-                        .map_err(|e| crate::EdgelinkError::invalid_operation(&format!("YAML parsing error: {e}")))?;
+                        .map_err(|e| crate::RustRedError::invalid_operation(&format!("YAML parsing error: {e}")))?;
                     Ok(Variant::from(yaml_value))
                 }
                 #[cfg(not(feature = "nodes_yaml"))]
                 {
-                    Err(crate::EdgelinkError::invalid_operation(
+                    Err(crate::RustRedError::invalid_operation(
                         "YAML format requires 'nodes_yaml' feature to be enabled",
                     ))
                 }

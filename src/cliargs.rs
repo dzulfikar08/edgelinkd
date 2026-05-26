@@ -1,9 +1,9 @@
 use clap::{Parser, Subcommand};
 
 const LONG_ABOUT: &str = r#"
-EdgeLinkd Daemon Program
+Rust-Red Daemon Program
 
-EdgeLinkd is a Node-RED compatible back-end engine implemented in Rust.
+Rust-Red is a Node-RED compatible back-end engine implemented in Rust.
 
 Copyright (C) 2023-TODAY Li Wei and contributors. All rights reserved.
 
@@ -12,7 +12,7 @@ For more information, visit the website: https://github.com/oldrev/edgelink
 
 #[derive(Parser, Debug, Clone)]
 #[command(
-    version = concat!(env!("CARGO_PKG_VERSION"), " • #", env!("EDGELINK_BUILD_GIT_HASH"), " • built at ", env!("EDGELINK_BUILD_TIME")), 
+    version = concat!(env!("CARGO_PKG_VERSION"), " • #", env!("RUST_RED_BUILD_GIT_HASH"), " • built at ", env!("RUST_RED_BUILD_TIME")),
     about,
     author,
     long_about=LONG_ABOUT,
@@ -23,7 +23,7 @@ pub struct CliArgs {
     #[arg(short, long, default_value_t = 2, global = true)]
     pub verbose: usize,
 
-    /// Home directory of EdgeLink, default is `~/.edgelink`
+    /// Home directory of Rust-Red, default is `~/.rust-red`
     #[arg(long, global = true)]
     pub home: Option<String>,
 
@@ -45,7 +45,7 @@ pub struct CliArgs {
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum Commands {
-    /// Run the EdgeLink workflow engine
+    /// Run the Rust-Red workflow engine
     Run {
         /// Path of the 'flows.json' file.
         #[arg()]

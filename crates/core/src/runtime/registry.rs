@@ -47,6 +47,13 @@ impl RegistryBuilder {
         self
     }
 
+    /// Register a dynamically-created MetaNode (e.g., from a WASM plugin).
+    /// The caller is responsible for ensuring the MetaNode and its string
+    /// fields have a 'static lifetime (e.g., via Box::leak).
+    pub fn register_dynamic(&mut self, meta_node: &'static MetaNode) {
+        self.meta_nodes.insert(meta_node.type_, meta_node);
+    }
+
     pub fn with_builtins(mut self) -> Self {
         for meta in inventory::iter::<MetaNode> {
             log::debug!("[REGISTRY] Available built-in Node: '{}'", meta.type_);

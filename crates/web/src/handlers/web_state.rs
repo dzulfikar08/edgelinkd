@@ -1,20 +1,23 @@
 // REMOVED: clone_for_update. All mutation must use interior mutability (Mutex/RwLock) on fields.
 use axum::Router;
-use edgelink_core::runtime::paths;
+use rust_red_core::runtime::audit::AuditLogger;
+use rust_red_core::runtime::paths;
 
+use crate::auth::AuthConfig;
 use crate::handlers::CommsManager;
 use crate::models::RedSystemSettings;
-use edgelink_core::runtime::engine::Engine;
-use edgelink_core::runtime::engine_events::EngineEvent;
-use edgelink_core::runtime::registry::RegistryHandle;
-use edgelink_core::web::WebHandlerRegistry;
+use rust_red_core::runtime::engine::Engine;
+use rust_red_core::runtime::engine_events::EngineEvent;
+use rust_red_core::runtime::registry::RegistryHandle;
+use rust_red_core::web::WebHandlerRegistry;
+use rust_red_core::web::frontend_plugin::FrontendPluginRegistry;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 
 // --- WebStateCore trait implementation ---
-use edgelink_core::web::web_state_trait::WebStateCore;
+use rust_red_core::web::web_state_trait::WebStateCore;
 
 /// Callback type for restarting the flow engine
 pub type FlowEngineRestartCallback = Arc<dyn Fn(PathBuf) -> tokio::task::JoinHandle<()> + Send + Sync>;
@@ -32,6 +35,11 @@ pub struct WebState {
     pub cancel_token: RwLock<Option<CancellationToken>>, // Cancellation token for graceful shutdown
     pub static_dir: PathBuf,                      // Static files directory
     pub web_handlers: WebHandlerRegistry,         // Dynamic/static web handler registry
+    pub frontend_plugins: FrontendPluginRegistry, // Pluggable frontend registry
+    pub audit_logger: Option<Arc<dyn AuditLogger>>, // Audit logger for security events
+    pub auth_config: AuthConfig,                  // Authentication/RBAC configuration
+    #[cfg(feature = "cluster")]
+    pub cluster_manager: std::sync::RwLock<Option<Arc<rust_red_cluster::ClusterManager>>>,
 }
 
 /// Implement WebStateCore trait for WebState
@@ -47,6 +55,9 @@ impl WebStateCore for WebState {
     }
     fn web_handlers(&self) -> &WebHandlerRegistry {
         &self.web_handlers
+    }
+    fn frontend_plugins(&self) -> &FrontendPluginRegistry {
+        &self.frontend_plugins
     }
     fn flows_file_path(&self) -> &RwLock<Option<PathBuf>> {
         &self.flows_file_path
@@ -69,6 +80,11 @@ impl WebState {
             cancel_token: RwLock::new(None), // No cancellation token by default
             static_dir: Self::default_static_dir(), // Set static_dir using helper
             web_handlers: WebHandlerRegistry::new(), // Initialize web handler registry
+            frontend_plugins: FrontendPluginRegistry::default(), // Collect compile-time plugins
+            audit_logger: None,
+            auth_config: AuthConfig::default(),
+            #[cfg(feature = "cluster")]
+            cluster_manager: std::sync::RwLock::new(None),
         })
     }
 }
@@ -123,6 +139,18 @@ impl WebState {
         *ct = Some(token);
     }
 
+    /// Set the audit logger
+    pub fn set_audit_logger(&mut self, logger: Arc<dyn AuditLogger>) {
+        self.audit_logger = Some(logger);
+    }
+
+    /// Set the cluster manager
+    #[cfg(feature = "cluster")]
+    pub fn set_cluster_manager(&self, manager: Arc<rust_red_cluster::ClusterManager>) {
+        let mut cm = self.cluster_manager.write().unwrap();
+        *cm = Some(manager);
+    }
+
     /// Start event listeners and debug message handling
     pub async fn start_event_listeners(&self, cancel_token: tokio_util::sync::CancellationToken) {
         let engine_guard = self.engine.read().await;
@@ -134,6 +162,10 @@ impl WebState {
             // Start status message listener
             let status_rx = engine.status_channel().subscribe();
             self.comms.start_status_listener(status_rx, cancel_token.clone()).await;
+
+            // Start dashboard data listener
+            let dashboard_rx = engine.dashboard_channel().subscribe();
+            self.comms.start_dashboard_listener(dashboard_rx, cancel_token.clone()).await;
 
             // Start Engine event listener
             let mut event_rx = engine.subscribe_events();
@@ -241,7 +273,7 @@ impl WebState {
     /// Start debug message listener (connect to Engine's debug channel)
     pub async fn start_debug_listener(
         &self,
-        engine: &edgelink_core::runtime::engine::Engine,
+        engine: &rust_red_core::runtime::engine::Engine,
         cancel_token: tokio_util::sync::CancellationToken,
     ) {
         let debug_rx = engine.debug_channel().subscribe();

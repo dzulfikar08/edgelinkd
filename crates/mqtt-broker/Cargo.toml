@@ -1,0 +1,22 @@
+[package]
+name = "rust-red-mqtt-broker"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { workspace = true, features = ["full"] }
+tokio-util = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+log = { workspace = true }
+bytes = { workspace = true }
+thiserror = "2"
+chrono = { version = "0.4", features = ["serde"] }
+dashmap = "6"
+config = { workspace = true }
+axum = { workspace = true }
+
+[dev-dependencies]
+rumqttc = "0.24"
+tokio = { workspace = true, features = ["test-util", "macros", "rt-multi-thread"] }

@@ -22,7 +22,7 @@ pub trait Plugin {
 
 #[derive(thiserror::Error, Debug)]
 #[non_exhaustive]
-pub enum EdgelinkError {
+pub enum RustRedError {
     #[error("Permission Denied")]
     PermissionDenied,
 
@@ -66,9 +66,9 @@ pub type Result<T, E = anyhow::Error> = anyhow::Result<T, E>;
 
 pub use anyhow::Context as ErrorContext;
 
-impl EdgelinkError {
+impl RustRedError {
     pub fn invalid_operation(msg: &str) -> anyhow::Error {
-        EdgelinkError::InvalidOperation(msg.into()).into()
+        RustRedError::InvalidOperation(msg.into()).into()
     }
 }
 

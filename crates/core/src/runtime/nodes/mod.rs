@@ -12,7 +12,7 @@ use tokio::select;
 use tokio_util::sync::CancellationToken;
 
 use super::context::Context;
-use crate::EdgelinkError;
+use crate::RustRedError;
 use crate::runtime::flow::*;
 use crate::runtime::model::json::{RedFlowNodeConfig, RedGlobalNodeConfig};
 use crate::runtime::model::*;
@@ -30,6 +30,11 @@ mod storage_nodes;
 
 #[cfg(feature = "nodes_network")]
 mod network_nodes;
+
+mod db_nodes;
+
+#[cfg(feature = "nodes_modbus")]
+mod industrial_nodes;
 
 pub const NODE_MSG_CHANNEL_CAPACITY: usize = 16;
 
@@ -161,7 +166,7 @@ pub trait FlowNodeBehavior: Send + Sync + FlowsElement {
     async fn inject_msg(&self, msg: MsgHandle, cancel: CancellationToken) -> crate::Result<()> {
         select! {
             result = self.get_base().msg_tx.send(msg) => result.map_err(|e| e.into()),
-            _ = cancel.cancelled() => Err(EdgelinkError::TaskCancelled.into()),
+            _ = cancel.cancelled() => Err(RustRedError::TaskCancelled.into()),
         }
     }
 
@@ -188,7 +193,7 @@ pub trait FlowNodeBehavior: Send + Sync + FlowsElement {
             return Ok(());
         }
         if envelope.port >= self.get_base().ports.len() {
-            return Err(crate::EdgelinkError::BadArgument("envelope"))
+            return Err(crate::RustRedError::BadArgument("envelope"))
                 .with_context(|| format!("Invalid port index {}", envelope.port));
         }
 
@@ -305,9 +310,42 @@ where
 {
     match node.recv_msg(cancel.clone()).await {
         Ok(msg) => {
+            let node_type = node.type_str().to_string();
+            let node_id = node.id().to_string();
+
+            // Telemetry: record message counter and measure processing duration
+            super::telemetry::record_message(&node_type);
+            let start = std::time::Instant::now();
+
+            // Create an OTel span for the node processing (no-op when otel feature is off).
+            // We store the span and end it manually to avoid holding a !Send ContextGuard
+            // across an await point.
+            #[cfg(feature = "otel")]
+            let mut _otel_span = {
+                use opentelemetry::trace::{Span, SpanKind, Tracer};
+                use opentelemetry::KeyValue;
+                let tracer = opentelemetry::global::tracer("rust-red");
+                tracer
+                    .span_builder("node_process")
+                    .with_kind(SpanKind::Internal)
+                    .with_attributes(vec![
+                        KeyValue::new("node_type", node_type.clone()),
+                        KeyValue::new("node_id", node_id),
+                    ])
+                    .start(&tracer)
+            };
+
             if let Err(ref err) = proc(node, msg.clone()).await {
                 let flow = node.flow().expect("flow");
                 let error_message = err.to_string();
+
+                #[cfg(feature = "otel")]
+                {
+                    use opentelemetry::trace::{Span, Status};
+                    _otel_span.set_status(Status::Error {
+                        description: error_message.clone().into(),
+                    });
+                }
 
                 match flow.handle_error(node, &error_message, Some(msg.clone()), None, cancel.clone()).await {
                     Ok(_) => (),
@@ -317,11 +355,21 @@ where
                 }
             }
 
+            // End the OTel span (no-op when otel feature is off).
+            #[cfg(feature = "otel")]
+            {
+                use opentelemetry::trace::Span;
+                _otel_span.end();
+            }
+
+            // Record processing duration
+            super::telemetry::record_message_duration(&node_type, start.elapsed());
+
             // Report the completion
             node.notify_uow_completed(msg, cancel.clone()).await;
         }
         Err(ref err) => {
-            if let Some(EdgelinkError::TaskCancelled) = err.downcast_ref::<EdgelinkError>() {
+            if let Some(RustRedError::TaskCancelled) = err.downcast_ref::<RustRedError>() {
                 return;
             }
 

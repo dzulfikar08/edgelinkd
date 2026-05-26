@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use crate::runtime::flow::Flow;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
-#[flow_node("test-once", red_name = "test-once", module = "edgelink_core")]
+#[flow_node("test-once", red_name = "test-once", module = "rust_red_core")]
 struct TestOnceNode {
     base: BaseFlowNodeState,
 }
@@ -34,8 +34,8 @@ impl FlowNodeBehavior for TestOnceNode {
             match self.recv_msg(stop_token.clone()).await {
                 Ok(msg) => engine.recv_final_msg(msg).expect("Shoud send final msg to the engine"),
                 Err(e) => {
-                    match e.downcast_ref::<EdgelinkError>() {
-                        Some(EdgelinkError::TaskCancelled) => (),
+                    match e.downcast_ref::<RustRedError>() {
+                        Some(RustRedError::TaskCancelled) => (),
                         None | Some(_) => eprintln!("Failed to recv_msg(): {e:?}"),
                     }
                     break;

@@ -65,7 +65,7 @@ pub async fn evaluate_raw_node_property(
             let arr = Variant::deserialize(&jv)?;
             let bytes = arr
                 .to_bytes()
-                .ok_or(EdgelinkError::BadArgument("value"))
+                .ok_or(RustRedError::BadArgument("value"))
                 .with_context(|| format!("Expected an array of bytes, got: {value:?}"))?;
             Ok(Variant::from(bytes))
         }
@@ -75,11 +75,11 @@ pub async fn evaluate_raw_node_property(
                 if let Some(pv) = msg.get_nav_stripped(value) {
                     Ok(pv.clone())
                 } else {
-                    Err(EdgelinkError::BadArgument("value"))
+                    Err(RustRedError::BadArgument("value"))
                         .with_context(|| format!("Cannot get the property(s) from `msg`: {value}"))
                 }
             } else {
-                Err(EdgelinkError::BadArgument("msg")).with_context(|| "`msg` is not existed!".to_owned())
+                Err(RustRedError::BadArgument("msg")).with_context(|| "`msg` is not existed!".to_owned())
             }
         }
 
@@ -89,13 +89,13 @@ pub async fn evaluate_raw_node_property(
                 .and_then(|f| f.engine())
                 .or(node.and_then(|n| n.engine()))
                 .map(|e| e.context().clone())
-                .ok_or_else(|| EdgelinkError::BadArgument("flow,node"))?;
+                .ok_or_else(|| RustRedError::BadArgument("flow,node"))?;
 
             let msg_env = msg.map(|m| SmallVec::from([PropexEnv::ExtRef("msg", m.as_variant())])).unwrap_or_default();
             if let Some(ctx_value) = ctx.get_one(ctx_prop.store, ctx_prop.key, &msg_env).await {
                 Ok(ctx_value)
             } else {
-                Err(EdgelinkError::BadArgument("value"))
+                Err(RustRedError::BadArgument("value"))
                     .with_context(|| format!("Cannot found the global context variable `{value}`"))
             }
         }
@@ -106,24 +106,31 @@ pub async fn evaluate_raw_node_property(
                 .cloned()
                 .or(node.and_then(|n| n.flow()))
                 .map(|e| e.context().clone())
-                .ok_or_else(|| EdgelinkError::BadArgument("flow,node"))?;
+                .ok_or_else(|| RustRedError::BadArgument("flow,node"))?;
 
             let msg_env = msg.map(|m| SmallVec::from([PropexEnv::ExtRef("msg", m.as_variant())])).unwrap_or_default();
             if let Some(ctx_value) = ctx.get_one(ctx_prop.store, ctx_prop.key, &msg_env).await {
                 Ok(ctx_value)
             } else {
-                Err(EdgelinkError::BadArgument("value"))
+                Err(RustRedError::BadArgument("value"))
                     .with_context(|| format!("Cannot found the flow context variable `{value}`"))
             }
         }
 
         RedPropertyType::Bool => Ok(Variant::Bool(value.trim_ascii().parse::<bool>()?)),
 
-        RedPropertyType::Jsonata => todo!(),
+        RedPropertyType::Jsonata => {
+            if let Some(msg) = msg {
+                crate::runtime::jsonata::evaluate_variant(value, msg.as_variant())
+            } else {
+                Err(RustRedError::BadArgument("msg"))
+                    .with_context(|| "JSONata evaluation requires a msg context".to_owned())
+            }
+        }
 
         RedPropertyType::Env => match evaluate_env_property(value, node, flow) {
             Some(ev) => Ok(ev),
-            _ => Err(EdgelinkError::BadArgument("value"))
+            _ => Err(RustRedError::BadArgument("value"))
                 .with_context(|| format!("Cannot found the environment variable `{value}`")),
         },
     }
@@ -164,7 +171,7 @@ pub async fn evaluate_node_property_value(
             if let Some(msg) = msg {
                 if let Some(pv) = msg.get_nav_stripped(prop.as_str()) { pv.clone() } else { Variant::Null }
             } else {
-                return Err(EdgelinkError::BadArgument("msg")).with_context(|| "`msg` is required".to_owned());
+                return Err(RustRedError::BadArgument("msg")).with_context(|| "`msg` is required".to_owned());
             }
         }
 
@@ -175,13 +182,13 @@ pub async fn evaluate_node_property_value(
                 .and_then(|f| f.engine())
                 .or(node.and_then(|n| n.engine()))
                 .map(|e| e.context().clone())
-                .ok_or_else(|| EdgelinkError::BadArgument("flow,node"))?;
+                .ok_or_else(|| RustRedError::BadArgument("flow,node"))?;
 
             let msg_env = msg.map(|m| SmallVec::from([PropexEnv::ExtRef("msg", m.as_variant())])).unwrap_or_default();
             if let Some(ctx_value) = ctx.get_one(ctx_prop.store, ctx_prop.key, &msg_env).await {
                 ctx_value
             } else {
-                return Err(EdgelinkError::BadArgument("value"))
+                return Err(RustRedError::BadArgument("value"))
                     .with_context(|| format!("Cannot found the global context variable `{value}`"));
             }
         }
@@ -192,30 +199,42 @@ pub async fn evaluate_node_property_value(
                 .cloned()
                 .or(node.and_then(|n| n.flow()))
                 .map(|e| e.context().clone())
-                .ok_or_else(|| EdgelinkError::BadArgument("flow,node"))?;
+                .ok_or_else(|| RustRedError::BadArgument("flow,node"))?;
 
             let msg_env = msg.map(|m| SmallVec::from([PropexEnv::ExtRef("msg", m.as_variant())])).unwrap_or_default();
             if let Some(ctx_value) = ctx.get_one(ctx_prop.store, ctx_prop.key, &msg_env).await {
                 ctx_value
             } else {
-                return Err(EdgelinkError::BadArgument("value"))
+                return Err(RustRedError::BadArgument("value"))
                     .with_context(|| format!("Cannot found the flow context variable `{value}`"));
             }
         }
 
-        (RedPropertyType::Jsonata, _) => todo!(),
+        (RedPropertyType::Jsonata, RedPropertyValue::Runtime(ref expr))
+        | (RedPropertyType::Jsonata, RedPropertyValue::Constant(Variant::String(ref expr))) => {
+            if let Some(msg) = msg {
+                crate::runtime::jsonata::evaluate_variant(expr.as_str(), msg.as_variant())?
+            } else {
+                return Err(RustRedError::BadArgument("msg"))
+                    .with_context(|| "JSONata evaluation requires a msg context".to_owned());
+            }
+        }
+        (RedPropertyType::Jsonata, _) => {
+            return Err(RustRedError::BadArgument("value"))
+                .with_context(|| "JSONata expression must be a string value".to_owned());
+        }
 
         (RedPropertyType::Env, RedPropertyValue::Runtime(ref s)) => match evaluate_env_property(s.as_str(), node, flow)
         {
             Some(ev) => ev,
             _ => {
-                return Err(EdgelinkError::BadArgument("value"))
+                return Err(RustRedError::BadArgument("value"))
                     .with_context(|| format!("Cannot found the environment variable: '{s}'"));
             }
         },
 
         (_, _) => {
-            return Err(EdgelinkError::BadArgument("value")).with_context(|| "cannot parse the expr".to_owned());
+            return Err(RustRedError::BadArgument("value")).with_context(|| "cannot parse the expr".to_owned());
         }
     };
 

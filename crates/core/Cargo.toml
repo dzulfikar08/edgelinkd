@@ -1,12 +1,12 @@
 [package]
-name = "edgelink-core"
+name = "rust-red-core"
 version = "0.1.99"
 edition = "2024"
 readme = "README.md"
 authors = ["Li Wei <oldrev@gmail.com>"]
 
 [lib]
-name = "edgelink_core"
+name = "rust_red_core"
 
 [dependencies]
 anyhow.workspace = true
@@ -31,7 +31,7 @@ nom.workspace = true
 bumpalo.workspace = true
 regex.workspace = true
 tokio-cron-scheduler.workspace = true
-chrono.workspace = true
+chrono = { workspace = true, features = ["serde"] }
 semver.workspace = true
 rquickjs = { optional = true, workspace = true }
 rquickjs-extra = { optional = true, workspace = true }
@@ -58,8 +58,9 @@ url = "2.5"
 quick-xml = { workspace = true, optional = true, features = ["serialize"] }
 serde-xml-rs = { workspace = true, optional = true }
 # Crates in this project
-edgelink-macro = { path = "../macro" }
+rust-red-macro = { path = "../macro" }
 dashmap.workspace = true
+jsonata-rs.workspace = true
 itertools.workspace = true
 smallvec.workspace = true
 smallstr.workspace = true
@@ -70,7 +71,25 @@ rumqttc = { version = "0.24", optional = true }
 tokio-tungstenite = { workspace = true, optional = true, features = ["rustls-tls-native-roots"] }
 futures-util = { version = "0.3", optional = true }
 reqwest = { workspace = true, optional = true }
+# Database drivers
+tokio-postgres = { workspace = true, optional = true }
+deadpool-postgres = { workspace = true, optional = true }
+deadpool = { version = "0.12", optional = true }
+tiberius = { version = "0.12", optional = true, features = ["chrono"] }
+rusqlite = { workspace = true, optional = true }
+# Industrial protocols
+tokio-modbus = { workspace = true, optional = true }
+tokio-serial = { workspace = true, optional = true }
+opcua = { version = "0.12", optional = true }
+bacnet-rs = { version = "0.2", optional = true }
 axum.workspace = true
+# OpenTelemetry (optional)
+opentelemetry = { workspace = true, optional = true }
+opentelemetry_sdk = { workspace = true, optional = true }
+opentelemetry-otlp = { workspace = true, optional = true }
+once_cell = { workspace = true, optional = true }
+# HTML parsing
+scraper = { workspace = true, optional = true }
 
 [dev-dependencies]
 # Enable test-utilities in dev mode only. This is mostly for tests.
@@ -78,6 +97,9 @@ tokio = { workspace = true, features = ["test-util"] }
 log4rs.workspace = true
 ctor.workspace = true
 futures.workspace = true
+tempfile = "3"
+rust-red-mqtt-broker = { path = "../mqtt-broker" }
+rumqttc = "0.24"
 
 
 [features]
@@ -88,13 +110,32 @@ pymod = []
 js = ["rquickjs", "rquickjs-extra"]
 rqjs_bindgen = ["rquickjs/bindgen"]
 nodes_network = ["nodes_mqtt", "nodes_udp", "nodes_tcp", "nodes_http", "nodes_websocket"]
-nodes_parser = ["nodes_xml", "nodes_yaml"]
+nodes_parser = ["nodes_xml", "nodes_yaml", "nodes_html"]
 nodes_storage = ["nodes_storage_watch"]
 nodes_mqtt = ["rumqttc"]
-nodes_http = ["tokio/net", "reqwest", "urlencoding"]
+nodes_http = ["tokio/net", "dep:reqwest", "urlencoding"]
 nodes_tcp = ["tokio/net"]
 nodes_udp = ["tokio/net"]
-nodes_websocket = ["tokio-tungstenite", "futures-util"]
+nodes_websocket = ["dep:tokio-tungstenite", "dep:futures-util"]
 nodes_storage_watch = ["notify"]
 nodes_xml = ["quick-xml", "serde-xml-rs"]
 nodes_yaml = ["serde_yaml_ng"]
+nodes_html = ["dep:scraper"]
+otel = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", "dep:once_cell"]
+nodes_postgres = ["dep:tokio-postgres", "dep:deadpool-postgres"]
+nodes_timescaledb = ["dep:tokio-postgres", "dep:deadpool-postgres"]
+nodes_mssql = ["dep:tiberius", "dep:deadpool", "tokio-util/compat"]
+nodes_modbus = ["dep:tokio-modbus"]
+nodes_modbus_serial = ["nodes_modbus", "dep:tokio-serial"]
+nodes_opcua = ["dep:opcua"]
+nodes_bacnet = ["dep:bacnet-rs"]
+nodes_influxdb = ["dep:reqwest", "urlencoding"]
+nodes_sqlite = ["dep:rusqlite"]
+ai = ["dep:reqwest", "dep:futures-util"]
+cluster = []
+internal-testing = []
+
+[[test]]
+name = "nodered_compat"
+path = "tests/nodered_compat/mod.rs"
+required-features = ["internal-testing"]

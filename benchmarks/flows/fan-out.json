@@ -1,0 +1,193 @@
+[
+  {
+    "id": "f200000000000001",
+    "label": "Benchmark Fan-Out 10",
+    "type": "tab"
+  },
+  {
+    "id": "e200000000000001",
+    "name": "bench-debug-0",
+    "type": "debug",
+    "z": "f200000000000001",
+    "active": true,
+    "console": true,
+    "tosidebar": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusType": "auto",
+    "statusVal": "",
+    "wires": []
+  },
+  {
+    "id": "e200000000000002",
+    "name": "bench-debug-1",
+    "type": "debug",
+    "z": "f200000000000001",
+    "active": true,
+    "console": true,
+    "tosidebar": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusType": "auto",
+    "statusVal": "",
+    "wires": []
+  },
+  {
+    "id": "e200000000000003",
+    "name": "bench-debug-2",
+    "type": "debug",
+    "z": "f200000000000001",
+    "active": true,
+    "console": true,
+    "tosidebar": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusType": "auto",
+    "statusVal": "",
+    "wires": []
+  },
+  {
+    "id": "e200000000000004",
+    "name": "bench-debug-3",
+    "type": "debug",
+    "z": "f200000000000001",
+    "active": true,
+    "console": true,
+    "tosidebar": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusType": "auto",
+    "statusVal": "",
+    "wires": []
+  },
+  {
+    "id": "e200000000000005",
+    "name": "bench-debug-4",
+    "type": "debug",
+    "z": "f200000000000001",
+    "active": true,
+    "console": true,
+    "tosidebar": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusType": "auto",
+    "statusVal": "",
+    "wires": []
+  },
+  {
+    "id": "e200000000000006",
+    "name": "bench-debug-5",
+    "type": "debug",
+    "z": "f200000000000001",
+    "active": true,
+    "console": true,
+    "tosidebar": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusType": "auto",
+    "statusVal": "",
+    "wires": []
+  },
+  {
+    "id": "e200000000000007",
+    "name": "bench-debug-6",
+    "type": "debug",
+    "z": "f200000000000001",
+    "active": true,
+    "console": true,
+    "tosidebar": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusType": "auto",
+    "statusVal": "",
+    "wires": []
+  },
+  {
+    "id": "e200000000000008",
+    "name": "bench-debug-7",
+    "type": "debug",
+    "z": "f200000000000001",
+    "active": true,
+    "console": true,
+    "tosidebar": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusType": "auto",
+    "statusVal": "",
+    "wires": []
+  },
+  {
+    "id": "e200000000000009",
+    "name": "bench-debug-8",
+    "type": "debug",
+    "z": "f200000000000001",
+    "active": true,
+    "console": true,
+    "tosidebar": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusType": "auto",
+    "statusVal": "",
+    "wires": []
+  },
+  {
+    "id": "e20000000000000a",
+    "name": "bench-debug-9",
+    "type": "debug",
+    "z": "f200000000000001",
+    "active": true,
+    "console": true,
+    "tosidebar": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusType": "auto",
+    "statusVal": "",
+    "wires": []
+  },
+  {
+    "id": "b200000000000001",
+    "name": "bench-inject",
+    "type": "inject",
+    "z": "f200000000000001",
+    "once": true,
+    "onceDelay": 0,
+    "payload": "benchmark",
+    "payloadType": "str",
+    "repeat": "",
+    "crontab": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "topic": "bench",
+    "wires": [
+      [
+        "e200000000000001",
+        "e200000000000002",
+        "e200000000000003",
+        "e200000000000004",
+        "e200000000000005",
+        "e200000000000006",
+        "e200000000000007",
+        "e200000000000008",
+        "e200000000000009",
+        "e20000000000000a"
+      ]
+    ]
+  }
+]

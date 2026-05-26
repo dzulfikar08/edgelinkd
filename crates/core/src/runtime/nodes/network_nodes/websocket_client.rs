@@ -11,7 +11,7 @@ use serde::Deserialize;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 type ClientWebSocketStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
@@ -130,7 +130,7 @@ impl WebSocketClientNode {
 
         let (ws_stream, _) = connect_async(&connection.url)
             .await
-            .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("Failed to connect to WebSocket: {e}")))?;
+            .map_err(|e| crate::RustRedError::InvalidOperation(format!("Failed to connect to WebSocket: {e}")))?;
 
         // Store the stream
         {
@@ -241,7 +241,7 @@ impl WebSocketClientNode {
                                 log::debug!("WebSocket client: Received raw frame");
                             }
                             Some(Err(e)) => {
-                                return Err(crate::EdgelinkError::InvalidOperation(format!("WebSocket error: {e}")).into());
+                                return Err(crate::RustRedError::InvalidOperation(format!("WebSocket error: {e}")).into());
                             }
                             None => {
                                 log::info!("WebSocket client: Connection stream ended");
@@ -281,13 +281,13 @@ impl WebSocketClientNode {
                     stream
                         .send(message)
                         .await
-                        .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("Failed to send message: {e}")))?;
+                        .map_err(|e| crate::RustRedError::InvalidOperation(format!("Failed to send message: {e}")))?;
                     return Ok(());
                 }
             }
         }
 
-        Err(crate::EdgelinkError::InvalidOperation("WebSocket client not connected".to_string()).into())
+        Err(crate::RustRedError::InvalidOperation("WebSocket client not connected".to_string()).into())
     }
 
     pub async fn is_connected(&self) -> bool {

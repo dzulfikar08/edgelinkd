@@ -3,6 +3,9 @@ use std::collections::HashMap;
 use config;
 use serde::{Deserialize, Serialize};
 
+use crate::security::SecurityConfig;
+use crate::versioning::VersioningConfig;
+
 /// Node-RED Flow data structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Flow {
@@ -189,6 +192,10 @@ pub struct RedSystemSettings {
     pub context: ContextConfig,
     pub logging: LoggingConfig,
     pub libraries: Vec<LibraryEntry>,
+    #[serde(default)]
+    pub security: SecurityConfig,
+    #[serde(default)]
+    pub versioning: VersioningConfig,
 }
 
 /// Editor theme configuration
@@ -291,6 +298,8 @@ impl Default for RedSystemSettings {
             context: ContextConfig::default(),
             logging: LoggingConfig::default(),
             libraries: Vec::<LibraryEntry>::default(),
+            security: SecurityConfig::default(),
+            versioning: VersioningConfig::default(),
         }
     }
 }
@@ -303,8 +312,8 @@ impl Default for EditorTheme {
         languages.insert("ja".to_string(), "日本語".to_string());
 
         Self {
-            page: ThemePage { title: "EdgeLinkd".to_string(), favicon: None, css: None, scripts: None },
-            header: ThemeHeader { title: "EdgeLinkd".to_string(), url: None, image: None },
+            page: ThemePage { title: "Rust-Red".to_string(), favicon: None, css: None, scripts: None },
+            header: ThemeHeader { title: "Rust-Red".to_string(), url: None, image: None },
             deploy_button: ThemeDeployButton { button_type: "simple".to_string(), label: None, icon: None },
             menu: ThemeMenu {
                 menu_item_import_library: true,
@@ -333,7 +342,7 @@ impl Default for LoggingConfig {
 
 // Load WebServerArgs from config, fallback to default if not found
 impl RedSystemSettings {
-    pub fn load(cfg: &config::Config) -> edgelink_core::Result<Self> {
+    pub fn load(cfg: &config::Config) -> rust_red_core::Result<Self> {
         match cfg.get::<Self>("web") {
             Ok(res) => Ok(res),
             Err(config::ConfigError::NotFound(_)) => Ok(Self::default()),

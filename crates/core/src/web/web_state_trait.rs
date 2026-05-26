@@ -1,5 +1,6 @@
 //! Trait for core-to-web decoupling: WebStateCore
-//! Web crate 的 WebState 需实现本 trait，core handler 只依赖 trait，不依赖具体实现。
+//! The web crate's WebState must implement this trait; core handlers depend
+//! only on the trait, not on a concrete type.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -9,19 +10,22 @@ use tokio_util::sync::CancellationToken;
 use crate::runtime::engine::Engine;
 use crate::runtime::registry::RegistryHandle;
 use crate::web::WebHandlerRegistry;
+use crate::web::frontend_plugin::FrontendPluginRegistry;
 
 /// Trait for core-to-web decoupling: WebStateCore
 pub trait WebStateCore: Send + Sync {
-    /// 获取 Engine 实例
+    /// Engine instance
     fn engine(&self) -> &RwLock<Option<Arc<Engine>>>;
-    /// 获取节点注册表
+    /// Node registry
     fn registry(&self) -> &RwLock<Option<RegistryHandle>>;
-    /// 获取静态文件目录
+    /// Static file directory
     fn static_dir(&self) -> &PathBuf;
-    /// 获取 Web handler 注册表
+    /// Web handler registry
     fn web_handlers(&self) -> &WebHandlerRegistry;
-    /// 获取 flows.json 路径
+    /// Frontend plugin registry
+    fn frontend_plugins(&self) -> &FrontendPluginRegistry;
+    /// Path to flows.json
     fn flows_file_path(&self) -> &RwLock<Option<PathBuf>>;
-    /// 获取取消 token
+    /// Cancellation token
     fn cancel_token(&self) -> &RwLock<Option<CancellationToken>>;
 }

@@ -1,0 +1,15 @@
+[package]
+name = "rust-red-nodes-dummy"
+version = "0.1.99"
+edition = "2024"
+
+[dependencies]
+async-trait.workspace = true
+tokio-util.workspace = true
+log.workspace = true
+config.workspace = true
+inventory.workspace = true
+rust-red-core = { path = "../../crates/core", default-features = false, features = [
+    "core",
+] }
+rust-red-macro = { path = "../../crates/macro" }

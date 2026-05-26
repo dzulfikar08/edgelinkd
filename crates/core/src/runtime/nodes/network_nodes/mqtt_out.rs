@@ -1,5 +1,5 @@
 // Licensed under the Apache License, Version 2.0
-// Copyright EdgeLink contributors
+// Copyright Rust-Red contributors
 // Based on Node-RED 10-mqtt.js MQTT Out node
 
 //! MQTT Out Node
@@ -41,7 +41,7 @@ use tokio::time::timeout;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Default)]
 enum MqttQoS {
@@ -143,7 +143,7 @@ impl MqttOutNode {
         // Create connection options
         // TODO: In a real implementation, this would get broker config from the broker ID
         // and support user/password, TLS, etc.
-        let client_id = format!("edgelink_{}", &uuid::Uuid::new_v4().to_string()[..8]);
+        let client_id = format!("rust_red_{}", &uuid::Uuid::new_v4().to_string()[..8]);
         let mut mqttoptions = rumqttc::MqttOptions::new(client_id, "localhost", 1883);
         mqttoptions.set_keep_alive(Duration::from_secs(60));
         mqttoptions.set_clean_session(true);
@@ -185,11 +185,11 @@ impl MqttOutNode {
             }
             Ok(Err(e)) => {
                 log::error!("MQTT connection failed: {e}");
-                Err(crate::EdgelinkError::invalid_operation(&format!("MQTT connection failed: {e}")))
+                Err(crate::RustRedError::invalid_operation(&format!("MQTT connection failed: {e}")))
             }
             Err(_) => {
                 log::error!("MQTT connection timeout after 10 seconds");
-                Err(crate::EdgelinkError::invalid_operation("MQTT connection timeout"))
+                Err(crate::RustRedError::invalid_operation("MQTT connection timeout"))
             }
         }
     }
@@ -201,7 +201,7 @@ impl MqttOutNode {
         let client = connection
             .client
             .as_ref()
-            .ok_or_else(|| crate::EdgelinkError::invalid_operation("MQTT client not available"))?;
+            .ok_or_else(|| crate::RustRedError::invalid_operation("MQTT client not available"))?;
 
         // Get topic from message or config (message overrides config)
         let topic = if let Some(topic_from_msg) = msg.get("topic").and_then(|v| v.as_str()) {
@@ -211,12 +211,12 @@ impl MqttOutNode {
         };
 
         if topic.is_empty() {
-            return Err(crate::EdgelinkError::invalid_operation("No topic specified for MQTT publish"));
+            return Err(crate::RustRedError::invalid_operation("No topic specified for MQTT publish"));
         }
 
         // Validate topic for publishing (no wildcards allowed, no control characters)
         if !self.is_valid_publish_topic(&topic) {
-            return Err(crate::EdgelinkError::invalid_operation(&format!("Invalid topic for publishing: '{topic}'")));
+            return Err(crate::RustRedError::invalid_operation(&format!("Invalid topic for publishing: '{topic}'")));
         }
 
         // Get QoS from message or config (message overrides config)
@@ -256,7 +256,7 @@ impl MqttOutNode {
         client
             .publish(topic, qos, retain, payload_bytes)
             .await
-            .map_err(|e| crate::EdgelinkError::invalid_operation(&format!("MQTT publish failed: {e}")))?;
+            .map_err(|e| crate::RustRedError::invalid_operation(&format!("MQTT publish failed: {e}")))?;
 
         Ok(())
     }
@@ -320,7 +320,7 @@ impl MqttOutNode {
             Variant::Object(_) | Variant::Array(_) => {
                 // For objects and arrays, stringify to JSON
                 serde_json::to_vec(payload)
-                    .map_err(|e| crate::EdgelinkError::invalid_operation(&format!("Failed to serialize payload: {e}")))
+                    .map_err(|e| crate::RustRedError::invalid_operation(&format!("Failed to serialize payload: {e}")))
             }
             Variant::Date(d) => {
                 // Convert SystemTime to ISO 8601 string
@@ -390,7 +390,7 @@ impl MqttOutNode {
                     connection.event_loop = None;
                 }
                 _ => {
-                    return Err(crate::EdgelinkError::invalid_operation(&format!(
+                    return Err(crate::RustRedError::invalid_operation(&format!(
                         "Invalid MQTT action: '{action}'. Valid actions are 'connect' and 'disconnect'"
                     )));
                 }

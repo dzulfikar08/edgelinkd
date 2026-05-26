@@ -8,7 +8,7 @@ use crate::runtime::eval;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug)]
 #[flow_node("change", red_name = "change")]
@@ -113,7 +113,7 @@ impl ChangeNode {
         if let (Some(tot), Some(to)) = (rule.tot, rule.to.as_ref()) {
             eval::evaluate_raw_node_property(to, tot, Some(self), None, Some(msg)).await
         } else {
-            Err(EdgelinkError::BadFlowsJson("The `tot` and `to` in the rule cannot be None".into()).into())
+            Err(RustRedError::BadFlowsJson("The `tot` and `to` in the rule cannot be None".into()).into())
         }
     }
 
@@ -121,7 +121,7 @@ impl ChangeNode {
         if let (Some(fromt), Some(from)) = (rule.fromt, rule.from.as_ref()) {
             eval::evaluate_raw_node_property(from, fromt, Some(self), None, Some(msg)).await
         } else {
-            Err(EdgelinkError::BadFlowsJson("The `fromt` and `from` in the rule cannot be None".into()).into())
+            Err(RustRedError::BadFlowsJson("The `fromt` and `from` in the rule cannot be None".into()).into())
         }
     }
 
@@ -132,7 +132,7 @@ impl ChangeNode {
             (Variant::Number(_), Some(_)) => ReducedType::Num,
             (_, Some(RedPropertyType::Re)) => ReducedType::Regex,
             _ => {
-                return Err(EdgelinkError::InvalidOperation(format!("Invalid `from_value`: {from_value:?}")).into());
+                return Err(RustRedError::InvalidOperation(format!("Invalid `from_value`: {from_value:?}")).into());
             }
         };
         Ok(result)
@@ -191,7 +191,7 @@ impl ChangeNode {
                     RedPropertyType::Global => self.get_engine().unwrap().get_context(),
 
             _ => {
-                return Err(EdgelinkError::NotSupported(
+                return Err(RustRedError::NotSupported(
                     "The 'change' node only allows modifying the 'msg' and global/flow context properties".into(),
                 )
                 .into())
@@ -320,7 +320,7 @@ impl ChangeNode {
             }
 
             _ => {
-                return Err(EdgelinkError::InvalidOperation(
+                return Err(RustRedError::InvalidOperation(
                     "`change` node only supports modifying the message, global, and workflow context properties."
                         .into(),
                 )
@@ -339,18 +339,18 @@ impl ChangeNode {
     async fn apply_rule_move(&self, rule: &Rule, msg: &mut Msg) -> crate::Result<()> {
         assert!(rule.t == RuleKind::Move);
         if !matches!(rule.pt, RedPropertyType::Flow | RedPropertyType::Global | RedPropertyType::Msg) {
-            return Err(EdgelinkError::BadArgument("rule")).with_context(|| "Invalid `pt` type");
+            return Err(RustRedError::BadArgument("rule")).with_context(|| "Invalid `pt` type");
         }
 
         if !matches!(rule.tot, Some(RedPropertyType::Flow) | Some(RedPropertyType::Global) | Some(RedPropertyType::Msg))
         {
-            return Err(EdgelinkError::BadArgument("rule")).with_context(|| "Invalid `tot` type");
+            return Err(RustRedError::BadArgument("rule")).with_context(|| "Invalid `tot` type");
         }
 
         let (to, tot) = if let (Some(to), Some(tot)) = (&rule.to, rule.tot) {
             (to, tot)
         } else {
-            return Err(EdgelinkError::BadArgument("rule")).with_context(|| "`to` and `tot` cannot be none or empty");
+            return Err(RustRedError::BadArgument("rule")).with_context(|| "`to` and `tot` cannot be none or empty");
         };
 
         // let target_prop = rule.to.as_ref().unwrap().as_str();
@@ -369,7 +369,7 @@ impl ChangeNode {
             RedPropertyType::Global => self.engine().map(|x| x.context().clone()),
             _ => None,
         };
-        res.ok_or(EdgelinkError::InvalidOperation("Failed to get context".to_owned()).into())
+        res.ok_or(RustRedError::InvalidOperation("Failed to get context".to_owned()).into())
     }
 
     async fn set_property(
@@ -406,11 +406,11 @@ impl ChangeNode {
                     )
                     .await
                 } else {
-                    Err(EdgelinkError::BadArgument("to_value")).with_context(|| "The target value is None".to_owned())
+                    Err(RustRedError::BadArgument("to_value")).with_context(|| "The target value is None".to_owned())
                 }
             }
 
-            _ => Err(EdgelinkError::NotSupported(
+            _ => Err(RustRedError::NotSupported(
                 "We only support to set message property and flow/global context variables".into(),
             )
             .into()),
@@ -422,7 +422,7 @@ impl ChangeNode {
             RedPropertyType::Msg => {
                 let _ = msg
                     .remove_nav(prop)
-                    .ok_or(EdgelinkError::NotSupported(format!("cannot remove the property '{prop}' in the msg")))?;
+                    .ok_or(RustRedError::NotSupported(format!("cannot remove the property '{prop}' in the msg")))?;
                 Ok(())
             }
 
@@ -433,7 +433,7 @@ impl ChangeNode {
                 // Setting it to "None" means to delete.
             }
 
-            _ => Err(EdgelinkError::NotSupported(
+            _ => Err(RustRedError::NotSupported(
                 "the 'change' node only allows deleting the 'msg' and global/flow context propertie".into(),
             )
             .into()),

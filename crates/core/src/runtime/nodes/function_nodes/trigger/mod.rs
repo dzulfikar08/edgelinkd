@@ -1,7 +1,7 @@
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::{with_uow, *};
-use edgelink_macro::*;
+use rust_red_macro::*;
 use mustache::MapBuilder;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -562,9 +562,9 @@ fn render_mustache_template(template_str: &str, msg: &Msg) -> crate::Result<Stri
     }
     let context = context_map.build();
     let template = mustache::compile_str(template_str)
-        .map_err(|e| crate::EdgelinkError::invalid_operation(&format!("Mustache compile error: {e}")))?;
+        .map_err(|e| crate::RustRedError::invalid_operation(&format!("Mustache compile error: {e}")))?;
     let result = template
         .render_data_to_string(&context)
-        .map_err(|e| crate::EdgelinkError::invalid_operation(&format!("Mustache render error: {e}")))?;
+        .map_err(|e| crate::RustRedError::invalid_operation(&format!("Mustache render error: {e}")))?;
     Ok(result)
 }

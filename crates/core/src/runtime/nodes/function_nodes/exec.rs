@@ -1,9 +1,9 @@
 // Licensed under the Apache License, Version 2.0
-// Copyright EdgeLink contributors
+// Copyright Rust-Red contributors
 // Based on Node-RED 90-exec.js
 
 use async_trait::async_trait;
-use edgelink_macro::*;
+use rust_red_macro::*;
 use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -286,7 +286,7 @@ impl ExecNode {
     ) -> crate::Result<()> {
         let (program, args) = Self::parse_command_for_spawn(&cmd);
         if program.is_empty() {
-            return Err(crate::EdgelinkError::invalid_operation("Empty command"));
+            return Err(crate::RustRedError::invalid_operation("Empty command"));
         }
         let mut command = Command::new(&program);
         command.args(&args);
@@ -355,7 +355,7 @@ impl ExecNode {
                             &cancel,
                         )
                         .await;
-                        return Err(crate::EdgelinkError::Timeout.into());
+                        return Err(crate::RustRedError::Timeout.into());
                     }
                 }
             } else {
@@ -523,7 +523,7 @@ impl FlowNodeBehavior for ExecNode {
                 drop(msg_guard);
 
                 if cmd.trim().is_empty() {
-                    return Err(crate::EdgelinkError::invalid_operation("Empty command"));
+                    return Err(crate::RustRedError::invalid_operation("Empty command"));
                 }
 
                 // Execute based on mode

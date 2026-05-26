@@ -7,7 +7,7 @@ use serde::Deserialize;
 
 use crate::runtime::flow::Flow;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug)]
 enum UdpMulticast {
@@ -112,13 +112,13 @@ impl UdpOutNode {
         });
 
         let target_ip = target_ip
-            .ok_or_else(|| crate::EdgelinkError::InvalidOperation("No target IP address specified".to_string()))?;
+            .ok_or_else(|| crate::RustRedError::InvalidOperation("No target IP address specified".to_string()))?;
 
         let target_port = target_port
-            .ok_or_else(|| crate::EdgelinkError::InvalidOperation("No target port specified".to_string()))?;
+            .ok_or_else(|| crate::RustRedError::InvalidOperation("No target port specified".to_string()))?;
 
         if target_port == 0 {
-            return Err(crate::EdgelinkError::InvalidOperation("Invalid port number".to_string()).into());
+            return Err(crate::RustRedError::InvalidOperation("Invalid port number".to_string()).into());
         }
 
         let remote_addr = std::net::SocketAddr::new(target_ip, target_port);
@@ -129,10 +129,10 @@ impl UdpOutNode {
             if let Some(payload_str) = payload.as_str() {
                 BASE64_STANDARD
                     .decode(payload_str)
-                    .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("Invalid base64 payload: {e}")))?
+                    .map_err(|e| crate::RustRedError::InvalidOperation(format!("Invalid base64 payload: {e}")))?
             } else {
                 return Err(
-                    crate::EdgelinkError::InvalidOperation("Base64 mode requires string payload".to_string()).into()
+                    crate::RustRedError::InvalidOperation("Base64 mode requires string payload".to_string()).into()
                 );
             }
         } else {
@@ -152,7 +152,7 @@ impl UdpOutNode {
             Err(e) => {
                 self.report_error(format!("Failed to send UDP packet: {e}"), msg.clone(), CancellationToken::new())
                     .await;
-                Err(crate::EdgelinkError::InvalidOperation(format!("Failed to send UDP packet: {e}")).into())
+                Err(crate::RustRedError::InvalidOperation(format!("Failed to send UDP packet: {e}")).into())
             }
         }
     }

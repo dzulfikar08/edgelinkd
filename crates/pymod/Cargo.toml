@@ -1,10 +1,10 @@
 [package]
-name = "edgelink-pymod"
+name = "rust-red-pymod"
 version = "0.1.99"
 edition = "2024"
 
 [lib]
-name = "edgelink_pymod"
+name = "rust_red_pymod"
 crate-type = ["cdylib"]
 
 [dependencies]
@@ -17,8 +17,8 @@ config.workspace = true
 log4rs.workspace = true
 log.workspace = true
 
-edgelink-core = { path = "../../crates/core", default-features = true, features = [
+rust-red-core = { path = "../../crates/core", default-features = true, features = [
     "pymod", "default"
 ] }
 # Node plug-ins:
-edgelink-nodes-dummy = { path = "../../node-plugins/edgelink-nodes-dummy" }
+rust-red-nodes-dummy = { path = "../../node-plugins/edgelink-nodes-dummy" }

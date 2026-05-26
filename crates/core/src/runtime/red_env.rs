@@ -187,20 +187,20 @@ impl RedEnvStoreBuilder {
                 let arr = Variant::deserialize(&jv)?;
                 let bytes = arr
                     .to_bytes()
-                    .ok_or(EdgelinkError::BadArgument("value"))
+                    .ok_or(RustRedError::BadArgument("value"))
                     .with_context(|| format!("Expected an array of bytes, got: {value:?}"))?;
                 Ok(Variant::Bytes(bytes))
             }
 
-            RedPropertyType::Jsonata => todo!(),
+            RedPropertyType::Jsonata => crate::runtime::jsonata::evaluate_with_env(value, &self.envs),
 
             RedPropertyType::Env => match self.normalized_and_get_existed(value) {
                 Some(ev) => Ok(ev),
-                _ => Err(EdgelinkError::BadArgument("value"))
+                _ => Err(RustRedError::BadArgument("value"))
                     .with_context(|| format!("Cannot found the environment variable: '{value}'")),
             },
 
-            _ => Err(EdgelinkError::BadArgument("type_"))
+            _ => Err(RustRedError::BadArgument("type_"))
                 .with_context(|| format!("Unsupported environment varibale type: '{value}'")),
         }
     }

@@ -9,7 +9,7 @@ use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
 use crate::text::parsing;
-use edgelink_macro::*;
+use rust_red_macro::*;
 use serde::{Deserialize, Deserializer};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, Eq, Deserialize)]

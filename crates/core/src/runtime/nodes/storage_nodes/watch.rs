@@ -9,7 +9,7 @@ use tokio::sync::mpsc;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug, Clone, Deserialize)]
 struct WatchNodeConfig {
@@ -63,7 +63,7 @@ impl WatchNode {
             self.config.files.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
 
         if files.is_empty() {
-            return Err(crate::EdgelinkError::invalid_operation("No files specified for watch node"));
+            return Err(crate::RustRedError::invalid_operation("No files specified for watch node"));
         }
 
         let (event_tx, event_rx) = mpsc::unbounded_channel();

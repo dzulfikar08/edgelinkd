@@ -9,7 +9,7 @@ use tokio::sync::RwLock;
 
 use crate::runtime::flow::Flow;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[cfg(test)]
 mod tests;
@@ -200,7 +200,7 @@ impl SwitchRuleOperator {
                 _ => Ok(false),
             },
             Self::Else => Ok(false),
-            _ => Err(EdgelinkError::NotSupported("Unsupported operator".to_owned()).into()),
+            _ => Err(RustRedError::NotSupported("Unsupported operator".to_owned()).into()),
         }
     }
 }
@@ -240,7 +240,7 @@ impl SwitchPropertyType {
 }
 
 impl TryFrom<SwitchPropertyType> for RedPropertyType {
-    type Error = EdgelinkError;
+    type Error = RustRedError;
 
     fn try_from(value: SwitchPropertyType) -> Result<Self, Self::Error> {
         match value {
@@ -251,7 +251,7 @@ impl TryFrom<SwitchPropertyType> for RedPropertyType {
             SwitchPropertyType::Num => Ok(RedPropertyType::Num),
             SwitchPropertyType::Jsonata => Ok(RedPropertyType::Jsonata),
             SwitchPropertyType::Env => Ok(RedPropertyType::Env),
-            SwitchPropertyType::Prev => Err(EdgelinkError::BadArgument("self")),
+            SwitchPropertyType::Prev => Err(RustRedError::BadArgument("self")),
         }
     }
 }

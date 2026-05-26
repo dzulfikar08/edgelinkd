@@ -4,7 +4,7 @@ use std::sync::Arc;
 // 3rd-party libs
 use clap::Parser;
 
-use edgelink_core::*;
+use rust_red_core::*;
 
 include!(concat!(env!("OUT_DIR"), "/__use_node_plugins.rs"));
 

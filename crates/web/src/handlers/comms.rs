@@ -54,7 +54,7 @@ impl CommsManager {
     /// Start status message listener task
     pub async fn start_status_listener(
         &self,
-        mut status_rx: tokio::sync::broadcast::Receiver<edgelink_core::runtime::status_channel::StatusMessage>,
+        mut status_rx: tokio::sync::broadcast::Receiver<rust_red_core::runtime::status_channel::StatusMessage>,
         cancel_token: tokio_util::sync::CancellationToken,
     ) {
         let comms_manager = self.clone();
@@ -288,7 +288,7 @@ impl CommsManager {
     /// Start debug message listener task
     pub async fn start_debug_listener(
         &self,
-        debug_rx: tokio::sync::broadcast::Receiver<edgelink_core::runtime::debug_channel::DebugMessage>,
+        debug_rx: tokio::sync::broadcast::Receiver<rust_red_core::runtime::debug_channel::DebugMessage>,
         cancel_token: tokio_util::sync::CancellationToken,
     ) {
         let comms_manager = self.clone();
@@ -367,6 +367,45 @@ impl CommsManager {
         });
     }
 
+    /// Start dashboard data message listener task.
+    ///
+    /// Subscribes to the engine's `DashboardChannel` and forwards each
+    /// `DashboardMessage` to connected WebSocket clients under the
+    /// `dashboard/data` topic.
+    pub async fn start_dashboard_listener(
+        &self,
+        mut dashboard_rx: tokio::sync::broadcast::Receiver<rust_red_core::runtime::dashboard_channel::DashboardMessage>,
+        cancel_token: tokio_util::sync::CancellationToken,
+    ) {
+        let comms_manager = self.clone();
+        tokio::spawn(async move {
+            log::info!("Dashboard data listener started");
+            loop {
+                tokio::select! {
+                    result = dashboard_rx.recv() => {
+                        match result {
+                            Ok(dashboard_msg) => {
+                                let data = serde_json::to_value(&dashboard_msg).unwrap_or(serde_json::Value::Null);
+                                comms_manager.send_to_topic("dashboard/data", &data).await;
+                            }
+                            Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
+                                log::warn!("Dashboard message receiver lagged, skipped {skipped} messages");
+                            }
+                            Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                                log::info!("Dashboard channel closed");
+                                break;
+                            }
+                        }
+                    }
+                    _ = cancel_token.cancelled() => {
+                        log::debug!("Dashboard listener received cancellation signal");
+                        break;
+                    }
+                }
+            }
+        });
+    }
+
     /// Send debug message
     pub async fn send_debug_message(&self, node_id: &str, node_name: &str, msg_data: serde_json::Value) {
         let debug_data = serde_json::json!({
@@ -409,7 +448,7 @@ impl CommsManager {
     pub async fn send_runtime_deploy_initial(
         &self,
         connection_id: &str,
-        engine: Option<&edgelink_core::runtime::engine::Engine>,
+        engine: Option<&rust_red_core::runtime::engine::Engine>,
     ) {
         let revision = if let Some(engine) = engine { Some(engine.flows_rev().await) } else { None };
 
@@ -575,7 +614,7 @@ async fn handle_websocket_message(
     tx: &broadcast::Sender<String>,
     connection_id: &str,
     comms_manager: &CommsManager,
-    engine: Option<&edgelink_core::runtime::engine::Engine>,
+    engine: Option<&rust_red_core::runtime::engine::Engine>,
 ) {
     log::debug!("Handling WebSocket message: {message:?}");
 

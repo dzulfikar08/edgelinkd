@@ -81,8 +81,8 @@ impl<'js> js::FromJs<'js> for Variant {
                                     map.insert(k.clone(), Variant::from_js(_ctx, v)?);
                                 }
                                 Err(e) => {
-                                    log::error!("Unknown fatal error: {e}");
-                                    unreachable!();
+                                    log::error!("Property iteration error in Variant::from_js: {e}");
+                                    return Err(e);
                                 }
                             }
                         }
@@ -118,7 +118,7 @@ impl<'js> js::IntoJs<'js> for Variant {
                 } else if let Some(u) = num.as_u64() {
                     u.into_js(ctx)
                 } else {
-                    unreachable!();
+                    0f64.into_js(ctx)
                 }
             }
 

@@ -4,10 +4,23 @@ use std::sync::Arc;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[cfg(feature = "nodes_yaml")]
 use serde_yaml_ng as yaml;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Default)]
+enum YamlAction {
+    #[serde(rename = "")]
+    #[default]
+    Auto,
+
+    #[serde(rename = "str")]
+    Stringify,
+
+    #[serde(rename = "obj")]
+    Parse,
+}
 
 /// YAML Parser Node
 ///
@@ -18,12 +31,13 @@ use serde_yaml_ng as yaml;
 ///
 /// Configuration:
 /// - `property`: The message property to operate on (default: "payload")
+/// - `action`: The action to perform: "" (auto), "str" (stringify), "obj" (parse)
 ///
 /// Behavior:
 /// - String input: Parse YAML to object using `yaml.load()`
 /// - Object input: Convert to YAML string using `yaml.dump()`
-/// - Buffer input: Warns and passes through unchanged
-/// - Other types: Warns and passes through unchanged
+/// - Buffer input: Convert to UTF-8 string before parsing
+/// - Other types: Pass through unchanged
 #[derive(Debug)]
 #[flow_node("yaml", red_name = "YAML")]
 struct YamlNode {
@@ -51,6 +65,10 @@ struct YamlNodeConfig {
     #[serde(default = "default_property")]
     property: String,
 
+    /// Action to perform: auto, str (stringify), or obj (parse)
+    #[serde(default)]
+    action: YamlAction,
+
     /// Number of outputs (usually 1)
     #[serde(default = "default_outputs")]
     #[allow(dead_code)]
@@ -70,40 +88,82 @@ impl YamlNode {
     async fn process_yaml(&self, msg: MsgHandle) -> crate::Result<()> {
         let mut msg_guard = msg.write().await;
 
-        // Get the value from the specified property
-        if !msg_guard.contains(&self.config.property) {
+        // Get the value from the specified property using nav-property access
+        if !msg_guard.contains_nav(&self.config.property) {
             // If property doesn't exist, just pass through
             drop(msg_guard);
             return self.fan_out_one(Envelope { port: 0, msg }, CancellationToken::new()).await;
         }
 
-        let property_value = msg_guard.get(&self.config.property).cloned();
+        let property_value = msg_guard.get_nav(&self.config.property).cloned();
 
         if let Some(value) = property_value {
-            let result = match &value {
-                Variant::String(yaml_string) => {
-                    // String input: parse YAML to object
-                    self.parse_yaml_to_object(yaml_string).await
+            // Check if this value should be processed
+            if !self.should_process(&value) {
+                // Just pass through without processing
+                drop(msg_guard);
+                return self.fan_out_one(Envelope { port: 0, msg }, CancellationToken::new()).await;
+            }
+
+            let result = match self.config.action {
+                YamlAction::Auto => {
+                    // Auto-detect: if string or buffer, try to parse; if object/array/bool/number, stringify
+                    match &value {
+                        Variant::String(s) => self.parse_yaml_string(s),
+                        Variant::Bytes(bytes) => {
+                            // Handle byte arrays (like Node.js Buffer)
+                            match String::from_utf8(bytes.clone()) {
+                                Ok(utf8_string) => self.parse_yaml_string(&utf8_string),
+                                Err(_) => Err(crate::RustRedError::InvalidOperation(
+                                    "Buffer contains invalid UTF-8".to_string(),
+                                )
+                                .into()),
+                            }
+                        }
+                        Variant::Array(_) | Variant::Object(_) | Variant::Bool(_) | Variant::Number(_) => {
+                            self.stringify_value(&value)
+                        }
+                        Variant::Null | Variant::Date(_) | Variant::Regexp(_) => {
+                            // Pass through without processing
+                            Ok(value)
+                        }
+                    }
                 }
-                Variant::Object(_) | Variant::Array(_) | Variant::Number(_) | Variant::Bool(_) => {
-                    // Object input: convert to YAML string
-                    self.convert_object_to_yaml(&value).await
+                YamlAction::Parse => {
+                    // Force parsing string to object
+                    match &value {
+                        Variant::String(s) => self.parse_yaml_string(s),
+                        Variant::Bytes(bytes) => {
+                            // Handle byte arrays
+                            match String::from_utf8(bytes.clone()) {
+                                Ok(utf8_string) => self.parse_yaml_string(&utf8_string),
+                                Err(_) => Err(crate::RustRedError::InvalidOperation(
+                                    "Buffer contains invalid UTF-8".to_string(),
+                                )
+                                .into()),
+                            }
+                        }
+                        Variant::Object(_)
+                        | Variant::Array(_)
+                        | Variant::Bool(_)
+                        | Variant::Number(_)
+                        | Variant::Null
+                        | Variant::Date(_)
+                        | Variant::Regexp(_) => {
+                            // Already an object or other type, pass through
+                            Ok(value)
+                        }
+                    }
                 }
-                Variant::Bytes(_) => {
-                    // Buffer input: warn and pass through (like Node-RED)
-                    log::warn!("YAML node: Cannot convert buffer to YAML");
-                    Ok(value)
-                }
-                _ => {
-                    // Other types: warn and pass through
-                    log::warn!("YAML node: Cannot convert {value:?} to YAML");
-                    Ok(value)
+                YamlAction::Stringify => {
+                    // Force stringifying object to YAML string
+                    self.stringify_value(&value)
                 }
             };
 
             match result {
                 Ok(new_value) => {
-                    msg_guard[&self.config.property] = new_value;
+                    let _ = msg_guard.set_nav(&self.config.property, new_value, true);
                 }
                 Err(e) => {
                     drop(msg_guard);
@@ -116,18 +176,47 @@ impl YamlNode {
         self.fan_out_one(Envelope { port: 0, msg }, CancellationToken::new()).await
     }
 
-    async fn parse_yaml_to_object(&self, yaml_string: &str) -> crate::Result<Variant> {
-        match yaml::from_str::<yaml::Value>(yaml_string) {
+    fn parse_yaml_string(&self, s: &str) -> crate::Result<Variant> {
+        match yaml::from_str::<yaml::Value>(s) {
             Ok(yaml_value) => Ok(yaml_value_to_variant(yaml_value)),
-            Err(e) => Err(crate::EdgelinkError::InvalidOperation(format!("YAML parse error: {e}")).into()),
+            Err(e) => Err(crate::RustRedError::InvalidOperation(format!("YAML parse error: {e}")).into()),
         }
     }
 
-    async fn convert_object_to_yaml(&self, value: &Variant) -> crate::Result<Variant> {
+    fn stringify_value(&self, value: &Variant) -> crate::Result<Variant> {
+        if let Variant::String(s) = value
+            && yaml::from_str::<yaml::Value>(s).is_ok()
+        {
+            return Ok(Variant::String(s.clone()));
+        }
         let yaml_value = variant_to_yaml_value(value);
         match yaml::to_string(&yaml_value) {
             Ok(yaml_string) => Ok(Variant::String(yaml_string)),
-            Err(e) => Err(crate::EdgelinkError::InvalidOperation(format!("YAML stringify error: {e}")).into()),
+            Err(e) => Err(crate::RustRedError::InvalidOperation(format!("YAML stringify error: {e}")).into()),
+        }
+    }
+
+    /// Check if a value should be processed based on its type
+    fn should_process(&self, value: &Variant) -> bool {
+        match self.config.action {
+            YamlAction::Auto => {
+                // Process strings (parse), objects/arrays (stringify), bytes (parse), bool/number (stringify)
+                match value {
+                    Variant::String(_) => true,
+                    Variant::Object(_) | Variant::Array(_) => true,
+                    Variant::Bool(_) | Variant::Number(_) => true,
+                    Variant::Bytes(_) => true,
+                    Variant::Null | Variant::Date(_) | Variant::Regexp(_) => false,
+                }
+            }
+            YamlAction::Parse => {
+                // Only process strings and byte arrays
+                matches!(value, Variant::String(_) | Variant::Bytes(_))
+            }
+            YamlAction::Stringify => {
+                // Process any value that can be serialized
+                !matches!(value, Variant::Date(_) | Variant::Regexp(_))
+            }
         }
     }
 }
@@ -136,7 +225,7 @@ impl YamlNode {
 impl YamlNode {
     async fn process_yaml(&self, _msg: MsgHandle) -> crate::Result<()> {
         log::error!("YAML node is not available. Please enable the 'nodes_yaml' feature.");
-        Err(crate::EdgelinkError::InvalidOperation("YAML node requires 'nodes_yaml' feature to be enabled".to_string())
+        Err(crate::RustRedError::InvalidOperation("YAML node requires 'nodes_yaml' feature to be enabled".to_string())
             .into())
     }
 }

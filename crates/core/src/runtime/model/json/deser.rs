@@ -9,7 +9,7 @@ use serde::de;
 use serde_json::Map as JsonMap;
 use serde_json::Value as JsonValue;
 
-use crate::EdgelinkError;
+use crate::RustRedError;
 use crate::runtime::model::ElementId;
 use crate::text::json::{EMPTY_ARRAY, JsonValueExt, option_value_equals_str};
 
@@ -20,7 +20,7 @@ pub fn load_flows_json_value(root_jv: JsonValue) -> crate::Result<ResolvedFlows>
     preprocess_merge_subflow_env(&mut preprocessed)?;
     let all_values = preprocessed
         .as_array()
-        .ok_or(EdgelinkError::BadFlowsJson("Cannot convert the value into an array".to_owned()))?;
+        .ok_or(RustRedError::BadFlowsJson("Cannot convert the value into an array".to_owned()))?;
 
     let mut flows = HashMap::new();
     let mut groups = HashMap::new();
@@ -71,7 +71,7 @@ pub fn load_flows_json_value(root_jv: JsonValue) -> crate::Result<ResolvedFlows>
                         }
                         None => {
                             return Err(
-                                EdgelinkError::BadFlowsJson("The group must have a 'z' property".to_owned()).into()
+                                RustRedError::BadFlowsJson("The group must have a 'z' property".to_owned()).into()
                             );
                         }
                     },
@@ -94,7 +94,7 @@ pub fn load_flows_json_value(root_jv: JsonValue) -> crate::Result<ResolvedFlows>
                 }
             }
         } else {
-            return Err(EdgelinkError::BadFlowsJson("The entry in `flows.json` must be an object".to_owned()).into());
+            return Err(RustRedError::BadFlowsJson("The entry in `flows.json` must be an object".to_owned()).into());
         }
     }
 
@@ -102,7 +102,7 @@ pub fn load_flows_json_value(root_jv: JsonValue) -> crate::Result<ResolvedFlows>
     for flow_id in flow_topo_sort.dependency_sort().iter() {
         let flow = flows
             .remove(flow_id)
-            .ok_or(EdgelinkError::BadFlowsJson(format!("Cannot find the flow_id('{flow_id}') in flows")))?;
+            .ok_or(RustRedError::BadFlowsJson(format!("Cannot find the flow_id('{flow_id}') in flows")))?;
         sorted_flows.push(flow);
     }
 
@@ -110,7 +110,7 @@ pub fn load_flows_json_value(root_jv: JsonValue) -> crate::Result<ResolvedFlows>
     for group_id in group_topo_sort.dependency_sort().iter() {
         let group = groups
             .remove(group_id)
-            .ok_or(EdgelinkError::BadFlowsJson(format!("Cannot find the group_id('{group_id}') in flows")))?;
+            .ok_or(RustRedError::BadFlowsJson(format!("Cannot find the group_id('{group_id}') in flows")))?;
         sorted_flow_groups.push(group);
     }
 
@@ -126,7 +126,7 @@ pub fn load_flows_json_value(root_jv: JsonValue) -> crate::Result<ResolvedFlows>
             );
             sorted_flow_nodes.push(node);
         } else {
-            return Err(EdgelinkError::BadFlowsJson(format!("Cannot find the node id '{node_id}'")).into());
+            return Err(RustRedError::BadFlowsJson(format!("Cannot find the node id '{node_id}'")).into());
         }
     }
 
@@ -178,7 +178,7 @@ fn preprocess_subflows(jv_root: JsonValue) -> crate::Result<JsonValue> {
     for jv in elements.iter() {
         if let Some(("subflow", subflow_id)) = jv.get_str("type").and_then(|x| x.split_once(':')) {
             let subflow = elements.iter().find(|x| x.get_str("id").is_some_and(|y| y == subflow_id)).ok_or(
-                EdgelinkError::BadFlowsJson(format!(
+                RustRedError::BadFlowsJson(format!(
                     "The cannot found the subflow for subflow instance node(id='{}', type='{}', name='{}')",
                     subflow_id,
                     jv.get_str_or("type", ""),
@@ -323,7 +323,7 @@ fn preprocess_subflows(jv_root: JsonValue) -> crate::Result<JsonValue> {
 }
 
 fn generate_new_xored_id_value(subflow_id: ElementId, old_id: &str) -> crate::Result<JsonValue> {
-    let old_id = parse_red_id_str(old_id).ok_or(EdgelinkError::BadFlowsJson(format!("Cannot parse id: '{old_id}'")))?;
+    let old_id = parse_red_id_str(old_id).ok_or(RustRedError::BadFlowsJson(format!("Cannot parse id: '{old_id}'")))?;
     Ok(JsonValue::String((subflow_id ^ old_id).to_string()))
 }
 
@@ -526,7 +526,7 @@ where
 
                 for hex_str in inner_seq {
                     let node_id = parse_red_id_str(&hex_str)
-                        .ok_or(EdgelinkError::BadFlowsJson(format!("Bad ID string: '{}'", &hex_str)))
+                        .ok_or(RustRedError::BadFlowsJson(format!("Bad ID string: '{}'", &hex_str)))
                         .map_err(de::Error::custom)?;
                     node_ids.push(node_id);
                 }
@@ -556,7 +556,7 @@ impl RedPropertyType {
             "bool" => Ok(RedPropertyType::Bool),
             "jsonata" => Ok(RedPropertyType::Jsonata),
             "env" => Ok(RedPropertyType::Env),
-            _ => Err(EdgelinkError::BadFlowsJson(format!("Unsupported property type: '{ptype}'")).into()),
+            _ => Err(RustRedError::BadFlowsJson(format!("Unsupported property type: '{ptype}'")).into()),
         }
     }
 }
@@ -731,7 +731,7 @@ where
 }
 
 fn preprocess_merge_subflow_env(flows: &mut JsonValue) -> crate::Result<()> {
-    let elements = flows.as_array_mut().ok_or(EdgelinkError::BadArgument("flows"))?;
+    let elements = flows.as_array_mut().ok_or(RustRedError::BadArgument("flows"))?;
     let subflows: HashMap<String, JsonValue> = elements
         .iter()
         .filter(|x| x.get_str("type").map(|y| y == "subflow").unwrap_or(false))
@@ -757,8 +757,8 @@ fn preprocess_merge_subflow_env(flows: &mut JsonValue) -> crate::Result<()> {
 
 fn merge_env(target_envs: &mut JsonValue, ref_envs: &JsonValue) -> crate::Result<()> {
     let target_vec: &mut Vec<JsonValue> =
-        target_envs.as_array_mut().ok_or(EdgelinkError::BadArgument("target_envs"))?;
-    let ref_vec: &Vec<JsonValue> = ref_envs.as_array().ok_or(EdgelinkError::BadArgument("ref_envs"))?;
+        target_envs.as_array_mut().ok_or(RustRedError::BadArgument("target_envs"))?;
+    let ref_vec: &Vec<JsonValue> = ref_envs.as_array().ok_or(RustRedError::BadArgument("ref_envs"))?;
 
     let target_names: HashSet<String> =
         target_vec.iter().filter_map(|item| item.get_str("name")).map(|name| name.to_string()).collect();

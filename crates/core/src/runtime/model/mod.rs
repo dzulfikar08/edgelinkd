@@ -5,7 +5,7 @@ use tokio_util::sync::CancellationToken;
 use tokio;
 use tokio::sync::mpsc;
 
-use crate::EdgelinkError;
+use crate::RustRedError;
 use crate::runtime::nodes::FlowNodeBehavior;
 
 mod eid;
@@ -55,10 +55,10 @@ impl PortWire {
         tokio::select! {
 
             send_result = self.msg_sender.send(msg) =>  send_result.map_err(|e|
-                crate::EdgelinkError::InvalidOperation(format!("Failed to transmit message: {e}")).into()),
+                crate::RustRedError::InvalidOperation(format!("Failed to transmit message: {e}")).into()),
 
             _ = cancel.cancelled() =>
-                Err(crate::EdgelinkError::TaskCancelled.into()),
+                Err(crate::RustRedError::TaskCancelled.into()),
         }
     }
 }
@@ -122,7 +122,7 @@ impl MsgReceiverHolder {
             Some(msg) => Ok(msg),
             None => {
                 log::error!("Failed to receive message");
-                Err(EdgelinkError::InvalidOperation("No message in the bounded channel!".to_owned()).into())
+                Err(RustRedError::InvalidOperation("No message in the bounded channel!".to_owned()).into())
             }
         }
     }
@@ -140,7 +140,7 @@ impl MsgReceiverHolder {
                 let rx = &mut self.rx.lock().await;
                 rx.recv().await.ok_or_else(|| {
                     log::error!("Failed to receive message");
-                    EdgelinkError::InvalidOperation("No message in the bounded channel!".to_owned()).into()
+                    RustRedError::InvalidOperation("No message in the bounded channel!".to_owned()).into()
                 })
             } => {
                 result
@@ -148,7 +148,7 @@ impl MsgReceiverHolder {
 
             _ = stop_token.cancelled() => {
                 // The token was cancelled
-                Err(EdgelinkError::TaskCancelled.into())
+                Err(RustRedError::TaskCancelled.into())
             }
         }
     }
@@ -173,7 +173,7 @@ impl MsgUnboundedReceiverHolder {
             Some(msg) => Ok(msg),
             None => {
                 log::error!("Failed to receive message");
-                Err(EdgelinkError::InvalidOperation("No message in the unbounded channel!".to_owned()).into())
+                Err(RustRedError::InvalidOperation("No message in the unbounded channel!".to_owned()).into())
             }
         }
     }
@@ -186,7 +186,7 @@ impl MsgUnboundedReceiverHolder {
 
             _ = stop_token.cancelled() => {
                 // The token was cancelled
-                Err(EdgelinkError::TaskCancelled.into())
+                Err(RustRedError::TaskCancelled.into())
             }
         }
     }

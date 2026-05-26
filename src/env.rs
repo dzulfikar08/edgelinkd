@@ -1,18 +1,18 @@
 use crate::flows::ensure_flows_file_exists;
 use config::Config;
-use edgelink_core::EdgelinkError;
+use rust_red_core::RustRedError;
 use once_cell::sync::OnceCell;
 use std::path::Path;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
-pub struct EdgelinkEnv {
+pub struct RustRedEnv {
     pub config: Config,
     pub exe_dir: String,
     pub ui_static_dir: OnceCell<String>,
 }
 
-impl EdgelinkEnv {
+impl RustRedEnv {
     pub fn new(config: Config) -> Self {
         let exe_dir = std::env::current_exe()
             .ok()
@@ -44,17 +44,17 @@ impl EdgelinkEnv {
     }
 
     /// Prepare the runtime environment: ensure flows file exists or error if user-specified and missing
-    pub fn prepare(&self) -> Result<(), EdgelinkError> {
+    pub fn prepare(&self) -> Result<(), RustRedError> {
         let flows_path =
             self.config.get_string("flows_path").expect("Config must provide flows_path after normalization");
         let is_default = self.config.get_bool("flows_path_is_default").unwrap_or(false);
         if is_default {
             // If using the default flows_path, create it automatically if missing
-            ensure_flows_file_exists(&flows_path).map_err(|e| EdgelinkError::Other(e.into()))?;
+            ensure_flows_file_exists(&flows_path).map_err(|e| RustRedError::Other(e.into()))?;
         } else {
             // If user specified flows_path, it must exist
             if !Path::new(&flows_path).exists() {
-                return Err(EdgelinkError::Other(
+                return Err(RustRedError::Other(
                     anyhow::anyhow!("The specified flows file does not exist: `{}`", flows_path).into(),
                 ));
             }

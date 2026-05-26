@@ -3,10 +3,10 @@ use tokio::io::{self, AsyncWriteExt};
 
 use crate::runtime::flow::Flow;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug)]
-#[flow_node("console-json", red_name = "console-json", module = "edgelink_core")]
+#[flow_node("console-json", red_name = "console-json", module = "rust_red_core")]
 struct ConsoleJsonNode {
     base: BaseFlowNodeState,
 }

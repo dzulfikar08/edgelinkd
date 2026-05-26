@@ -10,21 +10,21 @@ pub fn load_config(cli_args: &CliArgs) -> anyhow::Result<config::Config> {
         .map(|x| x.join(consts::DEFAULT_HOME_DIR_NAME).to_string_lossy().to_string())
         .expect("Cannot get the `~/home` directory");
 
-    // Priority order: --user-dir > --home > EDGELINK_HOME env var > default ~/.edgelinkd
-    let edgelink_home_dir =
-        cli_args.user_dir.clone().or(cli_args.home.clone()).or(std::env::var("EDGELINK_HOME").ok()).or(Some(home_dir));
+    // Priority order: --user-dir > --home > RUST_RED_HOME env var > default ~/.rust-red
+    let rust_red_home_dir =
+        cli_args.user_dir.clone().or(cli_args.home.clone()).or(std::env::var("RUST_RED_HOME").ok()).or(Some(home_dir));
 
     // Only set default flows_path if not specified by any source
     let mut builder = config::Config::builder();
     let mut home_dir_val = None;
-    if let Some(ref hd) = edgelink_home_dir {
+    if let Some(ref hd) = rust_red_home_dir {
         home_dir_val = Some(hd.clone());
         builder = builder.set_override("home_dir", hd.clone())?;
         // Add config file paths for logging
-        let main_cfg = std::path::Path::new(hd).join("edgelinkd.toml");
+        let main_cfg = std::path::Path::new(hd).join("rust-red.toml");
         let env_cfg = std::path::Path::new(hd).join(format!(
-            "edgelinkd.{}.toml",
-            cli_args.env.clone().or(std::env::var("EDGELINK_RUN_ENV").ok()).unwrap_or("dev".to_owned())
+            "rust-red.{}.toml",
+            cli_args.env.clone().or(std::env::var("RUST_RED_RUN_ENV").ok()).unwrap_or("dev".to_owned())
         ));
         config_files.push(main_cfg.display().to_string());
         config_files.push(env_cfg.display().to_string());
@@ -49,11 +49,11 @@ pub fn load_config(cli_args: &CliArgs) -> anyhow::Result<config::Config> {
         builder = builder.set_override("flows_path_is_default", false)?;
     }
 
-    let run_env = cli_args.env.clone().or(std::env::var("EDGELINK_RUN_ENV").ok()).unwrap_or("dev".to_owned());
+    let run_env = cli_args.env.clone().or(std::env::var("RUST_RED_RUN_ENV").ok()).unwrap_or("dev".to_owned());
 
     if cli_args.verbose > 0 {
-        if let Some(ref x) = edgelink_home_dir {
-            eprintln!("$EDGELINK_HOME={x}");
+        if let Some(ref x) = rust_red_home_dir {
+            eprintln!("$RUST_RED_HOME={x}");
             eprintln!("Loading config files:");
             for f in &config_files {
                 eprintln!("\t- `{f}`");
@@ -62,7 +62,7 @@ pub fn load_config(cli_args: &CliArgs) -> anyhow::Result<config::Config> {
     }
 
     // Ensure the config directory exists and has default config
-    if let Some(ref config_dir) = edgelink_home_dir {
+    if let Some(ref config_dir) = rust_red_home_dir {
         create_default_config_file(config_dir)?;
     }
 

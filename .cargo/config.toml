@@ -1,6 +1,6 @@
 [env]
-EDGELINK_HOME = "./"
-EDGELINK_RUN_ENV = "dev"
+RUST_RED_HOME = "./"
+RUST_RED_RUN_ENV = "dev"
 CLICOLOR_FORCE="1"
 
 [build]

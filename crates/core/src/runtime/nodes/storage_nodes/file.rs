@@ -9,7 +9,7 @@ use tokio::sync::Mutex;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct FileNodeSettings {

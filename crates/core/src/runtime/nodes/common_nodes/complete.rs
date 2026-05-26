@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug, Default, Deserialize)]
 struct CompleteNodeConfig {
@@ -58,7 +58,7 @@ impl FlowNodeBehavior for CompleteNode {
                     }
                 },
                 Err(ref err) => {
-                    if let Some(crate::EdgelinkError::TaskCancelled) = err.downcast_ref::<crate::EdgelinkError>() {
+                    if let Some(crate::RustRedError::TaskCancelled) = err.downcast_ref::<crate::RustRedError>() {
                         break;
                     } else {
                         log::error!("Failed to receive msg: {err:#?}");

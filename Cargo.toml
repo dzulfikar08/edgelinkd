@@ -1,19 +1,39 @@
 [package]
-name = "edgelink-app"
+name = "rust-red"
 version = "0.1.99"
 edition = "2021"
 rust-version = "1.77.2"
 readme = "README.md"
 homepage = "https://github.com/oldrev/edgelinkd"
-description = "EdgeLinkd is a Node-RED compatible run-time engine in Rust."
+description = "Rust-Red is a Node-RED compatible run-time engine in Rust."
 build = "build.rs"
 license = "Apache 2.0"
 authors = ["Li Wei <oldrev@gmail.com>"]
 
 
 [[bin]]
-name = "edgelinkd"
+name = "rust-red"
 path = "src/main.rs"
+
+[[bench]]
+name = "throughput"
+path = "benchmarks/throughput.rs"
+harness = false
+
+[[bench]]
+name = "memory"
+path = "benchmarks/memory.rs"
+harness = false
+
+[[bench]]
+name = "startup"
+path = "benchmarks/startup.rs"
+harness = false
+
+[[bench]]
+name = "wasm_overhead"
+path = "benchmarks/wasm_overhead.rs"
+harness = false
 
 
 # Enable a small amount of optimization in debug mode
@@ -60,6 +80,7 @@ thiserror = "2"
 nom = "^8.0"
 tokio-cron-scheduler = "^0.14"
 bumpalo = "3"
+jsonata-rs = "0.3"
 dirs-next = "2"
 clap = { version = "4", features = ["derive"] }
 itertools = "^0.14"
@@ -108,6 +129,7 @@ hex = "0.4"
 reqwest = { version = "0.11", features = [
     "json",
     "rustls-tls",
+    "stream",
 ], default-features = false }
 tokio-tungstenite = { version = "0.26.2", features = [
     "rustls-tls-native-roots",
@@ -122,8 +144,22 @@ axum = { version = "0.8.4", default-features = false, features = [
     "tokio",
     "ws",
     "query",
+    "multipart",
 ] }
 rumqttc = { version = "0.24" }
+wasmtime = { version = "45", features = ["async", "cranelift"] }
+rmp-serde = "1"
+postcard = { version = "1", features = ["alloc"] }
+notify = "8"
+opentelemetry = "0.29"
+opentelemetry_sdk = "0.29"
+opentelemetry-otlp = { version = "0.29", features = ["grpc-tonic"] }
+tokio-postgres = { version = "0.7", features = ["with-serde_json-1", "with-chrono-0_4"] }
+deadpool-postgres = "0.14"
+tokio-modbus = { version = "0.17", features = ["tcp-server"] }
+tokio-serial = "5.4"
+scraper = "0.22"
+rusqlite = { version = "0.32", features = ["bundled"] }
 
 [dependencies]
 clap.workspace = true
@@ -140,29 +176,74 @@ log4rs.workspace = true
 async-trait.workspace = true
 once_cell.workspace = true
 
-edgelink-core = { path = "crates/core", default-features = false }
+rust-red-core = { path = "crates/core", default-features = false }
 
 # Node plug-ins:
-edgelink-nodes-dummy = { path = "node-plugins/edgelink-nodes-dummy" }
+rust-red-nodes-dummy = { path = "node-plugins/rust-red-nodes-dummy" }
 
-edgelink-web = { path = "crates/web", default-features = true }
+rust-red-web = { path = "crates/web", default-features = true }
+rust-red-wasm-host = { path = "crates/wasm-host", optional = true }
+rust-red-mqtt-broker = { path = "crates/mqtt-broker", optional = true }
+rust-red-cluster = { path = "crates/cluster", optional = true }
 
 [dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+serde_json.workspace = true
+serde = { workspace = true, features = ["derive"] }
+tokio = { workspace = true, features = [
+    "rt",
+    "rt-multi-thread",
+    "macros",
+    "time",
+    "fs",
+    "sync",
+] }
+rust-red-core = { path = "crates/core" }
+postcard = { workspace = true }
+ctor.workspace = true
+log4rs.workspace = true
+log.workspace = true
+dashmap.workspace = true
 
 [build-dependencies]
 chrono = { workspace = true }
 
 [workspace]
-members = ["crates/*", "node-plugins/*"]
+members = [
+    "crates/core",
+    "crates/macro",
+    "crates/web",
+    "crates/wasm-host",
+    "crates/wasm-sdk",
+    "crates/marketplace",
+    "crates/mqtt-broker",
+    "crates/cluster",
+    "node-plugins/*",
+    "plugins/examples/*",
+]
+exclude = ["crates/pymod"]
 
 [package.metadata.bundle]
-identifier = "com.github.oldrev.edgelink"
+identifier = "com.github.oldrev.rust-red"
 
 [features]
-full = ["default", "rqjs_bindgen"]
-default = ["core", "js", "nodes_network", "nodes_storage"]
-core = ["edgelink-core/core"]
-js = ["edgelink-core/js"]
-nodes_network = ["edgelink-core/nodes_network"]
-nodes_storage = ["edgelink-core/nodes_storage"]
-rqjs_bindgen = ["js", "edgelink-core/rqjs_bindgen"]
+full = ["default", "rqjs_bindgen", "wasm_plugins", "cluster"]
+default = ["core", "js", "nodes_network", "nodes_storage", "nodes_postgres", "nodes_sqlite", "nodes_influxdb", "nodes_modbus", "nodes_opcua", "nodes_bacnet", "nodes_timescaledb", "nodes_mssql"]
+core = ["rust-red-core/core"]
+js = ["rust-red-core/js"]
+nodes_network = ["rust-red-core/nodes_network"]
+nodes_storage = ["rust-red-core/nodes_storage"]
+rqjs_bindgen = ["js", "rust-red-core/rqjs_bindgen"]
+otel = ["rust-red-core/otel", "rust-red-web/otel"]
+wasm_plugins = ["dep:rust-red-wasm-host"]
+mqtt_broker = ["dep:rust-red-mqtt-broker"]
+cluster = ["dep:rust-red-cluster", "rust-red-core/cluster", "rust-red-web/cluster"]
+nodes_postgres = ["rust-red-core/nodes_postgres"]
+nodes_timescaledb = ["rust-red-core/nodes_timescaledb"]
+nodes_mssql = ["rust-red-core/nodes_mssql"]
+nodes_modbus = ["rust-red-core/nodes_modbus"]
+nodes_opcua = ["rust-red-core/nodes_opcua"]
+nodes_bacnet = ["rust-red-core/nodes_bacnet"]
+nodes_influxdb = ["rust-red-core/nodes_influxdb"]
+nodes_sqlite = ["rust-red-core/nodes_sqlite"]
+ai = ["rust-red-core/ai", "rust-red-web/ai"]

@@ -255,17 +255,17 @@ impl RedPropertyValue {
                 let arr = Variant::deserialize(&jv)?;
                 let bytes = arr
                     .to_bytes()
-                    .ok_or(EdgelinkError::BadArgument("value"))
+                    .ok_or(RustRedError::BadArgument("value"))
                     .with_context(|| format!("Expected an array of bytes, got: {value:?}"))?;
                 Variant::from(bytes)
             }
 
             RedPropertyType::Bool => Variant::Bool(value.trim_ascii().parse::<bool>()?),
 
-            RedPropertyType::Jsonata => todo!(),
+            RedPropertyType::Jsonata => Variant::String(value.into()),
 
             _ => {
-                return Err(EdgelinkError::BadArgument("_type"))
+                return Err(RustRedError::BadArgument("_type"))
                     .with_context(|| format!("Unsupported constant type `{_type:?}`"));
             }
         };

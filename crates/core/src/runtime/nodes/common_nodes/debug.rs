@@ -18,7 +18,7 @@ use crate::runtime::debug_channel::create_debug_message;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::json::RedFlowNodeConfig;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Deserialize, Debug, Clone)]
 struct DebugNodeConfig {
@@ -336,8 +336,8 @@ impl FlowNodeBehavior for DebugNode {
                             }
                         }
                     }
-                    Err(ref err) => match err.downcast_ref::<crate::EdgelinkError>() {
-                        Some(crate::EdgelinkError::TaskCancelled) => {
+                    Err(ref err) => match err.downcast_ref::<crate::RustRedError>() {
+                        Some(crate::RustRedError::TaskCancelled) => {
                             log::info!("[debug:{}] Task cancelled", self.name());
                             break;
                         }

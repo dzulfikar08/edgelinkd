@@ -3,6 +3,7 @@ use axum::{Router, routing::MethodRouter};
 use inventory;
 use std::sync::{Arc, Mutex};
 
+pub mod frontend_plugin;
 pub mod web_state_trait;
 
 /// Descriptor for statically registered web handlers (compile-time).

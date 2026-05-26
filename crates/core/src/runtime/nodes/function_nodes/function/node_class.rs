@@ -72,6 +72,15 @@ impl<'js> NodeClass {
     fn send_msgs_internal(&self, ctx: Ctx<'js>, msgs: rquickjs::Value<'js>, cloning: bool) -> crate::Result<()> {
         let node = self.node.upgrade().clone().ok_or(rquickjs::Error::UnrelatedRuntime)? as Arc<dyn FlowNodeBehavior>;
 
+        // Create a child token linked to the function node's stop_token so that
+        // node.send() tasks are cancelled when the node stops.
+        let func_node = self.node.upgrade().ok_or(rquickjs::Error::UnrelatedRuntime)?;
+        let cancel = func_node
+            .stop_token
+            .get()
+            .map(|t| t.child_token())
+            .unwrap_or_else(CancellationToken::new);
+
         match msgs.type_of() {
             rquickjs::Type::Array => {
                 let mut msgs_to_send = SmallVec::new();
@@ -100,14 +109,13 @@ impl<'js> NodeClass {
                             msgs_in_port
                         };
                         is_first = false;
-                        let envelope = Envelope { port, msg: MsgHandle::new(Msg::from_js(&ctx, msg_value)?) };
+                        let envelope = Envelope { port: 0, msg: MsgHandle::new(Msg::from_js(&ctx, msg_value)?) };
                         msgs_to_send.push(envelope);
                     } else {
                         log::warn!("Unknown msg type: {port}");
                     }
                 }
 
-                let cancel = CancellationToken::new();
                 let async_node = node.clone();
                 ctx.spawn(async move {
                     match async_node.fan_out_many(msgs_to_send, cancel).await {
@@ -120,8 +128,6 @@ impl<'js> NodeClass {
             rquickjs::Type::Object => {
                 let msg_to_send = MsgHandle::new(Msg::from_js(&ctx, msgs)?);
                 let envelope = Envelope { port: 0, msg: msg_to_send };
-                // FIXME
-                let cancel = CancellationToken::new();
                 let async_node = node.clone();
                 ctx.spawn(async move {
                     match async_node.fan_out_one(envelope, cancel).await {
@@ -132,7 +138,7 @@ impl<'js> NodeClass {
             }
 
             _ => {
-                return Err(EdgelinkError::InvalidOperation(format!("Unsupported: {:?}", msgs.type_of())).into());
+                return Err(RustRedError::InvalidOperation(format!("Unsupported: {:?}", msgs.type_of())).into());
             }
         }
         Ok(())

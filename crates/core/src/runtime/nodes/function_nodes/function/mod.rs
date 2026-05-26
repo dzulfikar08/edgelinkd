@@ -15,10 +15,10 @@ use js::IntoJs;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 mod context_class;
-mod edgelink_class;
+mod rust_red_class;
 mod env_class;
 mod node_class;
 
@@ -39,6 +39,16 @@ struct FunctionNodeConfig {
 
     #[serde(default, rename = "outputs")]
     output_count: usize,
+
+    #[serde(default = "default_timeout")]
+    timeout: u64,
+
+    #[serde(default)]
+    noerr: u32,
+}
+
+fn default_timeout() -> u64 {
+    10
 }
 
 #[derive(Debug)]
@@ -48,6 +58,8 @@ struct FunctionNode {
 
     output_count: usize,
     user_script: Vec<u8>,
+    timeout_secs: u64,
+    stop_token: std::sync::OnceLock<CancellationToken>,
 }
 
 const JS_PRELUDE_SCRIPT: &str = include_str!("./function.prelude.js");
@@ -59,12 +71,17 @@ impl FlowNodeBehavior for FunctionNode {
     }
 
     async fn run(self: Arc<Self>, stop_token: CancellationToken) {
+        // Store stop_token so NodeClass.send() can create linked child tokens
+        let _ = self.stop_token.set(stop_token.clone());
+
         // This is a workaround; ideally, all function nodes should share a runtime. However,
         // for some reason, if the runtime of rquickjs is used as a global variable,
         // the members of node and env will disappear upon the second load.
         let js_rt_this = self.clone();
         log::debug!("[function:{}] Initializing JavaScript AsyncRuntime...", js_rt_this.name());
         let js_rt = js::AsyncRuntime::new().unwrap();
+        js_rt.set_max_stack_size(512 * 1024).await;
+        js_rt.set_memory_limit(5 * 1024 * 1024).await;
         let resolver = js::loader::BuiltinResolver::default();
         let loaders = (js::loader::ScriptLoader::default(), js::loader::ModuleLoader::default());
         js_rt.set_loader(resolver, loaders).await;
@@ -153,18 +170,18 @@ impl FunctionNode {
         let user_script = format!(
             "
             async function __el_init_func() {{ 
-                let global = __edgelinkGlobalContext; 
-                let flow = __edgelinkFlowContext; 
-                let context = __edgelinkNodeContext; 
+                let global = __rust_redGlobalContext; 
+                let flow = __rust_redFlowContext; 
+                let context = __rust_redNodeContext; 
                 context.flow = flow;
                 context.global = global;
                 \n{}\n
             }}
 
             async function __el_user_func(msg) {{ 
-                let global = __edgelinkGlobalContext; 
-                let flow = __edgelinkFlowContext; 
-                let context = __edgelinkNodeContext; 
+                let global = __rust_redGlobalContext; 
+                let flow = __rust_redFlowContext; 
+                let context = __rust_redNodeContext; 
                 let __msgid__ = msg._msgid; 
                 context.flow = flow;
                 context.global = global;
@@ -172,9 +189,9 @@ impl FunctionNode {
             }}
                 
             async function __el_finalize_func() {{ 
-                let global = __edgelinkGlobalContext; 
-                let flow = __edgelinkFlowContext; 
-                let context = __edgelinkNodeContext; 
+                let global = __rust_redGlobalContext; 
+                let flow = __rust_redFlowContext; 
+                let context = __rust_redNodeContext; 
                 context.flow = flow;
                 context.global = global;
                 \n{}\n
@@ -189,6 +206,8 @@ impl FunctionNode {
             base: base_node,
             output_count: function_config.output_count,
             user_script: user_script.as_bytes().to_vec(),
+            timeout_secs: function_config.timeout,
+            stop_token: std::sync::OnceLock::new(),
         };
         Ok(Box::new(node))
     }
@@ -205,7 +224,13 @@ impl FunctionNode {
         let js_msg = msg.into_js(&ctx)?;
         let args = (js_msg,);
         let promised = user_func.call::<_, rquickjs::Promise>(args)?;
-        let js_res_value: js::Result<js::Value> = promised.into_future().await;
+        let timeout_dur = std::time::Duration::from_secs(self.timeout_secs);
+        let js_res_value: js::Result<js::Value> = tokio::time::timeout(timeout_dur, promised.into_future())
+            .await
+            .unwrap_or_else(|_| {
+                log::warn!("[function:{}] Execution timed out after {}s", self.name(), self.timeout_secs);
+                Err(js::Error::Exception)
+            });
         let eval_result = match js_res_value.catch(&ctx) {
             Ok(js_result) => self.convert_return_value(&ctx, js_result, origin_msg_id),
             Err(e) => {
@@ -223,7 +248,7 @@ impl FunctionNode {
 
         match eval_result {
             Ok(msgs) => Ok(msgs),
-            Err(e) => Err(EdgelinkError::InvalidOperation(e.to_string()).into()),
+            Err(e) => Err(RustRedError::InvalidOperation(e.to_string()).into()),
         }
     }
 
@@ -305,7 +330,7 @@ impl FunctionNode {
             Ok(()) => (),
             Err(e) => {
                 log::error!("Failed to invoke the initialization script code: {e}");
-                return Err(EdgelinkError::InvalidOperation(e.to_string()).into());
+                return Err(RustRedError::InvalidOperation(e.to_string()).into());
             }
         }
         while ctx.execute_pending_job() {}
@@ -319,7 +344,7 @@ impl FunctionNode {
             Ok(()) => Ok(()),
             Err(e) => {
                 log::error!("[function:{}] Failed to invoke the `finialize` script code: {e}", self.name());
-                Err(EdgelinkError::InvalidOperation(e.to_string()).into())
+                Err(RustRedError::InvalidOperation(e.to_string()).into())
             }
         }
     }
@@ -328,10 +353,10 @@ impl FunctionNode {
         // crate::runtime::red::js::red::register_red_object(&ctx).unwrap();
         // js::Class::<node_class::NodeClass>::register(&ctx)?;
         // js::Class::<env_class::EnvClass>::register(&ctx)?;
-        // js::Class::<edgelink_class::EdgelinkClass>::register(&ctx)?;
+        // js::Class::<rust_red_class::RustRedClass>::register(&ctx)?;
 
         ::rquickjs_extra::console::init(ctx)?;
-        ctx.globals().set("__edgelink", edgelink_class::EdgelinkClass::default())?;
+        ctx.globals().set("__rust_red", rust_red_class::RustRedClass::default())?;
 
         /*
         {
@@ -347,27 +372,27 @@ impl FunctionNode {
 
         // Register the global-scoped context
         if let Some(global_context) = self.engine().map(|x| x.context().clone()) {
-            ctx.globals().set("__edgelinkGlobalContext", context_class::ContextClass::new(global_context))?;
+            ctx.globals().set("__rust_redGlobalContext", context_class::ContextClass::new(global_context))?;
         } else {
-            return Err(EdgelinkError::InvalidOperation("Failed to get global context".into()))
+            return Err(RustRedError::InvalidOperation("Failed to get global context".into()))
                 .with_context(|| "The engine cannot be released!");
         }
 
         // Register the flow-scoped context
         if let Some(flow_context) = self.flow().map(|x| x.context().clone()) {
-            ctx.globals().set("__edgelinkFlowContext", context_class::ContextClass::new(flow_context.clone()))?;
+            ctx.globals().set("__rust_redFlowContext", context_class::ContextClass::new(flow_context.clone()))?;
         } else {
-            return Err(EdgelinkError::InvalidOperation("Failed to get flow context".into()).into());
+            return Err(RustRedError::InvalidOperation("Failed to get flow context".into()).into());
         }
 
         // Register the node-scoped context
-        ctx.globals().set("__edgelinkNodeContext", context_class::ContextClass::new(self.context().clone()))?;
+        ctx.globals().set("__rust_redNodeContext", context_class::ContextClass::new(self.context().clone()))?;
 
         let mut eval_options = EvalOptions::default();
         eval_options.promise = true;
         eval_options.strict = true;
         if let Err(e) = ctx.eval_with_options::<(), _>(JS_PRELUDE_SCRIPT, eval_options).catch(ctx) {
-            return Err(EdgelinkError::InvalidOperation(e.to_string()))
+            return Err(RustRedError::InvalidOperation(e.to_string()))
                 .with_context(|| format!("Failed to evaluate the prelude script: {e:?}"));
         }
 

@@ -6,7 +6,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{Html, IntoResponse, Json},
 };
-use edgelink_core::runtime::paths;
+use rust_red_core::runtime::paths;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -46,7 +46,7 @@ pub async fn get_icons() -> Result<Json<Value>, StatusCode> {
     // Return a simulated icon list
     let icons = serde_json::json!({
         "node-red": ["arrow-in.svg", "arrow-out.svg", "debug.svg", "inject.svg", "function.svg"],
-        "edgelink": ["edge.svg", "link.svg"]
+        "rust-red": ["edge.svg", "link.svg"]
     });
 
     Ok(Json(icons))
@@ -126,7 +126,7 @@ pub async fn get_theme() -> Result<Json<Value>, StatusCode> {
     // Return Node-RED compatible theme list
     let jd = serde_json::json!({
         "page": {
-            "title": "EdgeLinkd",
+            "title": "Rust-Red",
             "favicon": "favicon.ico",
             "tabicon": {
                 "icon": "red/images/node-red-icon-black.svg",
@@ -134,7 +134,7 @@ pub async fn get_theme() -> Result<Json<Value>, StatusCode> {
             }
         },
         "header": {
-            "title": "EdgeLinkd",
+            "title": "Rust-Red",
             "image": "red/images/node-red.svg"
         },
         "asset": {
@@ -155,19 +155,19 @@ pub async fn get_plugin_messages(Query(params): Query<HashMap<String, String>>) 
     // Return localized messages for plugins
     let messages = match lang.as_str() {
         "zh-CN" => serde_json::json!({
-            "edgelink": {
+            "rust-red": {
                 "plugin": {
-                    "name": "EdgeLinkd 插件",
-                    "description": "EdgeLinkd 核心插件",
+                    "name": "Rust-Red 插件",
+                    "description": "Rust-Red 核心插件",
                     "version": "版本"
                 }
             }
         }),
         _ => serde_json::json!({
-            "edgelink": {
+            "rust-red": {
                 "plugin": {
-                    "name": "EdgeLinkd Plugin",
-                    "description": "EdgeLinkd core plugin",
+                    "name": "Rust-Red Plugin",
+                    "description": "Rust-Red core plugin",
                     "version": "Version"
                 }
             }

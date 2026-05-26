@@ -9,7 +9,7 @@ use serde::Deserialize;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug, Clone)]
 pub struct Xml2jsOptions {
@@ -160,7 +160,7 @@ impl XmlNode {
         // Write XML declaration
         writer
             .write_event(Event::Decl(quick_xml::events::BytesDecl::new("1.0", Some("UTF-8"), None)))
-            .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("XML write error: {e}")))?;
+            .map_err(|e| crate::RustRedError::InvalidOperation(format!("XML write error: {e}")))?;
 
         match value {
             Variant::Object(obj) => {
@@ -171,7 +171,7 @@ impl XmlNode {
                 let start = BytesStart::new("root");
                 writer
                     .write_event(Event::Start(start.clone()))
-                    .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("XML write error: {e}")))?;
+                    .map_err(|e| crate::RustRedError::InvalidOperation(format!("XML write error: {e}")))?;
 
                 for item in arr {
                     match item {
@@ -182,44 +182,44 @@ impl XmlNode {
                             // Write primitive values as item elements
                             writer
                                 .write_event(Event::Start(BytesStart::new("item")))
-                                .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("XML write error: {e}")))?;
+                                .map_err(|e| crate::RustRedError::InvalidOperation(format!("XML write error: {e}")))?;
 
                             let text = self.variant_to_xml_text(item);
                             writer
                                 .write_event(Event::Text(BytesText::new(&text)))
-                                .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("XML write error: {e}")))?;
+                                .map_err(|e| crate::RustRedError::InvalidOperation(format!("XML write error: {e}")))?;
 
                             writer
                                 .write_event(Event::End(BytesEnd::new("item")))
-                                .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("XML write error: {e}")))?;
+                                .map_err(|e| crate::RustRedError::InvalidOperation(format!("XML write error: {e}")))?;
                         }
                     }
                 }
 
                 writer
                     .write_event(Event::End(BytesEnd::new("root")))
-                    .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("XML write error: {e}")))?;
+                    .map_err(|e| crate::RustRedError::InvalidOperation(format!("XML write error: {e}")))?;
             }
             _ => {
                 // For primitive values, wrap in a root element
                 writer
                     .write_event(Event::Start(BytesStart::new("root")))
-                    .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("XML write error: {e}")))?;
+                    .map_err(|e| crate::RustRedError::InvalidOperation(format!("XML write error: {e}")))?;
 
                 let text = self.variant_to_xml_text(value);
                 writer
                     .write_event(Event::Text(BytesText::new(&text)))
-                    .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("XML write error: {e}")))?;
+                    .map_err(|e| crate::RustRedError::InvalidOperation(format!("XML write error: {e}")))?;
 
                 writer
                     .write_event(Event::End(BytesEnd::new("root")))
-                    .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("XML write error: {e}")))?;
+                    .map_err(|e| crate::RustRedError::InvalidOperation(format!("XML write error: {e}")))?;
             }
         }
 
         let result = writer.into_inner().into_inner();
         let xml_string = String::from_utf8(result)
-            .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("XML encoding error: {e}")))?;
+            .map_err(|e| crate::RustRedError::InvalidOperation(format!("XML encoding error: {e}")))?;
 
         // If pretty formatting is requested, we would need to format it
         // For now, return as-is since quick-xml doesn't have built-in pretty printing
@@ -251,12 +251,12 @@ impl XmlNode {
                     }
                     writer
                         .write_event(Event::Start(start_elem.clone()))
-                        .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("XML write error: {e}")))?;
+                        .map_err(|e| crate::RustRedError::InvalidOperation(format!("XML write error: {e}")))?;
                     if let Some(text_var) = inner_obj.get(&options.charkey) {
                         let text = self.variant_to_xml_text(text_var);
                         writer
                             .write_event(Event::Text(BytesText::new(&text)))
-                            .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("XML write error: {e}")))?;
+                            .map_err(|e| crate::RustRedError::InvalidOperation(format!("XML write error: {e}")))?;
                     }
                     for (child_key, child_value) in inner_obj {
                         if *child_key != options.attrkey && *child_key != options.charkey {
@@ -267,19 +267,19 @@ impl XmlNode {
                     }
                     writer
                         .write_event(Event::End(BytesEnd::new(key)))
-                        .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("XML write error: {e}")))?;
+                        .map_err(|e| crate::RustRedError::InvalidOperation(format!("XML write error: {e}")))?;
                 }
                 _ => {
                     writer
                         .write_event(Event::Start(BytesStart::new(key)))
-                        .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("XML write error: {e}")))?;
+                        .map_err(|e| crate::RustRedError::InvalidOperation(format!("XML write error: {e}")))?;
                     let text = self.variant_to_xml_text(value);
                     writer
                         .write_event(Event::Text(BytesText::new(&text)))
-                        .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("XML write error: {e}")))?;
+                        .map_err(|e| crate::RustRedError::InvalidOperation(format!("XML write error: {e}")))?;
                     writer
                         .write_event(Event::End(BytesEnd::new(key)))
-                        .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("XML write error: {e}")))?;
+                        .map_err(|e| crate::RustRedError::InvalidOperation(format!("XML write error: {e}")))?;
                 }
             }
         }
@@ -379,7 +379,7 @@ fn xml_to_variant(xml_string: &str, options: &Xml2jsOptions) -> crate::Result<Va
                 let (open_tag, mut obj) = stack.pop().unwrap();
 
                 if open_tag != tag {
-                    return Err(EdgelinkError::InvalidOperation(format!(
+                    return Err(RustRedError::InvalidOperation(format!(
                         "Mismatched tag: expected </{open_tag}> got </{tag}>"
                     ))
                     .into());
@@ -405,7 +405,7 @@ fn xml_to_variant(xml_string: &str, options: &Xml2jsOptions) -> crate::Result<Va
             }
 
             Ok(Event::Eof) => break,
-            Err(e) => return Err(EdgelinkError::InvalidOperation(format!("XML parse error: {e}")).into()),
+            Err(e) => return Err(RustRedError::InvalidOperation(format!("XML parse error: {e}")).into()),
             _ => {}
         }
     }
@@ -420,7 +420,7 @@ fn xml_to_variant(xml_string: &str, options: &Xml2jsOptions) -> crate::Result<Va
             Ok(content)
         }
     } else {
-        Err(EdgelinkError::InvalidOperation("No root element".to_string()).into())
+        Err(RustRedError::InvalidOperation("No root element".to_string()).into())
     }
 }
 

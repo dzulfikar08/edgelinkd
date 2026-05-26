@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::runtime::flow::Flow;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug)]
 #[flow_node("link in", red_name = "link")]

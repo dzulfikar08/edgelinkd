@@ -145,7 +145,7 @@ impl Context {
         let store = if let Some(storage) = storage {
             manager
                 .get_context_store(storage)
-                .ok_or(EdgelinkError::BadArgument("storage"))
+                .ok_or(RustRedError::BadArgument("storage"))
                 .with_context(|| format!("Cannot found the storage: '{storage}'"))?
         } else {
             manager.get_default_store()
@@ -206,14 +206,14 @@ impl ContextManagerBuilder {
             let meta = inventory::iter::<ProviderMetadata>
                 .into_iter()
                 .find(|x| x.type_ == store_options.provider)
-                .ok_or(EdgelinkError::Configuration)?;
+                .ok_or(RustRedError::Configuration)?;
             let store = (meta.factory)(store_name.into(), Some(store_options))?;
             self.stores.insert(store_name.clone(), Arc::from(store));
         }
 
         if !settings.stores.contains_key(&settings.default) {
             use anyhow::Context;
-            return Err(EdgelinkError::Configuration).with_context(|| {
+            return Err(RustRedError::Configuration).with_context(|| {
                 format!(
                     "Cannot found the default context storage '{}', check your configuration file.",
                     settings.default
@@ -299,7 +299,7 @@ fn context_store_parser(input: &str) -> nom::IResult<&str, ContextKey<'_>, nom::
 /// # Examples
 /// For example, `#:(file)::foo.bar` results in ` ContextKey { store: Some("file"), key: "foo.bar" }`.
 /// ```
-/// use edgelink_core::runtime::context::evaluate_key;
+/// use rust_red_core::runtime::context::evaluate_key;
 ///
 /// let res = evaluate_key("#:(file)::foo.bar").unwrap();
 /// assert_eq!(Some("file"), res.store);
@@ -308,7 +308,7 @@ fn context_store_parser(input: &str) -> nom::IResult<&str, ContextKey<'_>, nom::
 pub fn evaluate_key(key: &str) -> crate::Result<ContextKey<'_>> {
     match context_store_parser(key) {
         Ok(res) => Ok(res.1),
-        Err(e) => Err(EdgelinkError::BadArgument("key")).with_context(|| format!("Can not parse the key: '{e}'")),
+        Err(e) => Err(RustRedError::BadArgument("key")).with_context(|| format!("Can not parse the key: '{e}'")),
     }
 }
 

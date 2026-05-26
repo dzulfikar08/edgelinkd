@@ -11,7 +11,7 @@ use serde::Deserialize;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Default)]
 enum TcpGetMode {
@@ -162,19 +162,19 @@ impl TcpGetNode {
                             if b <= 255 {
                                 bytes.push(b as u8);
                             } else {
-                                return Err(crate::EdgelinkError::InvalidOperation(
+                                return Err(crate::RustRedError::InvalidOperation(
                                     "Array contains numbers > 255".to_string(),
                                 )
                                 .into());
                             }
                         } else {
-                            return Err(crate::EdgelinkError::InvalidOperation(
+                            return Err(crate::RustRedError::InvalidOperation(
                                 "Array contains non-integer numbers".to_string(),
                             )
                             .into());
                         }
                     } else {
-                        return Err(crate::EdgelinkError::InvalidOperation(
+                        return Err(crate::RustRedError::InvalidOperation(
                             "Array contains non-numeric items".to_string(),
                         )
                         .into());
@@ -312,8 +312,8 @@ impl TcpGetNode {
         match timeout(timeout_duration, stream.read(&mut temp_buf)).await {
             Ok(Ok(0)) => {} // EOF
             Ok(Ok(n)) => buffer.extend_from_slice(&temp_buf[..n]),
-            Ok(Err(e)) => return Err(crate::EdgelinkError::InvalidOperation(format!("Read error: {e}")).into()),
-            Err(_) => return Err(crate::EdgelinkError::InvalidOperation("Read timeout".to_string()).into()),
+            Ok(Err(e)) => return Err(crate::RustRedError::InvalidOperation(format!("Read error: {e}")).into()),
+            Err(_) => return Err(crate::RustRedError::InvalidOperation("Read timeout".to_string()).into()),
         }
         Ok(buffer)
     }
@@ -326,9 +326,9 @@ impl TcpGetNode {
         match timeout(timeout_duration, stream.read_exact(&mut buffer)).await {
             Ok(Ok(_)) => {}
             Ok(Err(e)) => {
-                return Err(crate::EdgelinkError::InvalidOperation(format!("Read error: {e}")).into());
+                return Err(crate::RustRedError::InvalidOperation(format!("Read error: {e}")).into());
             }
-            Err(_) => return Err(crate::EdgelinkError::InvalidOperation("Read timeout".to_string()).into()),
+            Err(_) => return Err(crate::RustRedError::InvalidOperation("Read timeout".to_string()).into()),
         }
         Ok(buffer)
     }
@@ -348,7 +348,7 @@ impl TcpGetNode {
                     }
                 }
                 Ok(Err(_)) => break, // Read error
-                Err(_) => return Err(crate::EdgelinkError::InvalidOperation("Read timeout".to_string()).into()),
+                Err(_) => return Err(crate::RustRedError::InvalidOperation("Read timeout".to_string()).into()),
             }
             // If splitc == 0, break after reading one byte
             if split_char == 0 {
@@ -372,9 +372,9 @@ impl TcpGetNode {
                     }
                 }
                 Ok(Err(e)) => {
-                    return Err(crate::EdgelinkError::InvalidOperation(format!("Read error: {e}")).into());
+                    return Err(crate::RustRedError::InvalidOperation(format!("Read error: {e}")).into());
                 }
-                Err(_) => return Err(crate::EdgelinkError::InvalidOperation("Read timeout".to_string()).into()),
+                Err(_) => return Err(crate::RustRedError::InvalidOperation("Read timeout".to_string()).into()),
             }
         }
         Ok(buffer)
@@ -415,7 +415,7 @@ impl TcpGetNode {
             .unwrap_or(0);
 
         if port == 0 {
-            return Err(crate::EdgelinkError::InvalidOperation("Port must be specified".to_string()).into());
+            return Err(crate::RustRedError::InvalidOperation("Port must be specified".to_string()).into());
         }
 
         let connection_key = format!("{host}:{port}");
@@ -586,14 +586,14 @@ impl TcpGetNode {
                         TcpGetNode::sit_worker(node, key, stream_arc, rx, split_count, split_char).await;
                     });
                     self.clients.get(&connection_key).ok_or_else(|| {
-                        crate::EdgelinkError::InvalidOperation(format!(
+                        crate::RustRedError::InvalidOperation(format!(
                             "TCP sit connection not found for {connection_key}"
                         ))
                     })?
                 }
                 Err(e) => {
                     self.report_error(format!("Failed to connect: {e}"), stop_token.clone()).await;
-                    return Err(crate::EdgelinkError::InvalidOperation(format!(
+                    return Err(crate::RustRedError::InvalidOperation(format!(
                         "Failed to connect to {connection_key}: {e}"
                     ))
                     .into());

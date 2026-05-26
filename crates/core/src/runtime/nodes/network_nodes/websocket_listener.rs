@@ -12,7 +12,7 @@ use serde::Deserialize;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 type WebSocketConnection = Arc<Mutex<WebSocketStream<TcpStream>>>;
 
@@ -92,7 +92,7 @@ impl WebSocketListenerNode {
 
         let listener = TcpListener::bind(&addr)
             .await
-            .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("Failed to bind to {addr}: {e}")))?;
+            .map_err(|e| crate::RustRedError::InvalidOperation(format!("Failed to bind to {addr}: {e}")))?;
 
         log::info!("WebSocket listener: Listening on {addr}");
 
@@ -159,7 +159,7 @@ impl WebSocketListenerNode {
         // Accept WebSocket connection
         let ws_stream = accept_async(stream)
             .await
-            .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("WebSocket handshake failed: {e}")))?;
+            .map_err(|e| crate::RustRedError::InvalidOperation(format!("WebSocket handshake failed: {e}")))?;
 
         let connection_id = format!("{addr}");
         let ws_connection = Arc::new(Mutex::new(ws_stream));

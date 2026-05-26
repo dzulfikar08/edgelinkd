@@ -1,5 +1,5 @@
 // Licensed under the Apache License, Version 2.0
-// Copyright EdgeLink contributors
+// Copyright Rust-Red contributors
 // Based on Node-RED 10-mqtt.js MQTT In node
 
 //! MQTT In Node
@@ -47,7 +47,7 @@ use tokio::time::timeout;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Default)]
 enum MqttQoS {
@@ -182,7 +182,7 @@ impl MqttInNode {
 
         // Create connection options
         // TODO: In a real implementation, this would get broker config from the broker ID
-        let client_id = format!("edgelink_in_{}", &uuid::Uuid::new_v4().to_string()[..8]);
+        let client_id = format!("rust_red_in_{}", &uuid::Uuid::new_v4().to_string()[..8]);
         let mut mqttoptions = rumqttc::MqttOptions::new(client_id, "localhost", 1883);
         mqttoptions.set_keep_alive(Duration::from_secs(60));
         mqttoptions.set_clean_session(true);
@@ -234,11 +234,11 @@ impl MqttInNode {
             }
             Ok(Err(e)) => {
                 log::error!("MQTT In connection failed: {e}");
-                Err(crate::EdgelinkError::invalid_operation(&format!("MQTT In connection failed: {e}")))
+                Err(crate::RustRedError::invalid_operation(&format!("MQTT In connection failed: {e}")))
             }
             Err(_) => {
                 log::error!("MQTT In connection timeout after 10 seconds");
-                Err(crate::EdgelinkError::invalid_operation("MQTT In connection timeout"))
+                Err(crate::RustRedError::invalid_operation("MQTT In connection timeout"))
             }
         }
     }
@@ -505,7 +505,7 @@ impl MqttInNode {
                     return Ok(Some(response_msg));
                 }
                 _ => {
-                    return Err(crate::EdgelinkError::invalid_operation(&format!(
+                    return Err(crate::RustRedError::invalid_operation(&format!(
                         "Invalid MQTT In action: '{action}'. Valid actions are 'connect', 'disconnect', 'subscribe', 'unsubscribe', 'getSubscriptions'"
                     )));
                 }
@@ -533,10 +533,10 @@ impl MqttInNode {
                     }
                     Ok(topics)
                 }
-                _ => Err(crate::EdgelinkError::invalid_operation("Invalid topic format in message")),
+                _ => Err(crate::RustRedError::invalid_operation("Invalid topic format in message")),
             }
         } else {
-            Err(crate::EdgelinkError::invalid_operation("No topic specified in message"))
+            Err(crate::RustRedError::invalid_operation("No topic specified in message"))
         }
     }
 }

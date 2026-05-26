@@ -1,14 +1,14 @@
 #![allow(unsafe_op_in_unsafe_fn)] // TODO FIXME
 
-use edgelink_core::runtime::model::{ElementId, Msg};
+use rust_red_core::runtime::model::{ElementId, Msg};
 use pyo3::{prelude::*, wrap_pyfunction};
 use serde::Deserialize;
 
-use edgelink_core::runtime::engine::Engine;
+use rust_red_core::runtime::engine::Engine;
 mod json;
 
 #[pymodule]
-fn edgelink_pymod(_py: Python, m: &PyModule) -> PyResult<()> {
+fn rust_red_pymod(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(rust_sleep, m)?)?;
     m.add_function(wrap_pyfunction!(run_flows_once, m)?)?;
 
@@ -62,7 +62,7 @@ fn run_flows_once<'a>(
         }
     };
 
-    let registry = edgelink_core::runtime::registry::RegistryBuilder::default()
+    let registry = rust_red_core::runtime::registry::RegistryBuilder::default()
         .build()
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("{e}")))?;
 

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "f1a1a1a1a1a1a1a1",
+    "label": "Benchmark Simple Passthrough",
+    "type": "tab"
+  },
+  {
+    "id": "b1b1b1b1b1b1b1b1",
+    "name": "bench-inject",
+    "type": "inject",
+    "z": "f1a1a1a1a1a1a1a1",
+    "once": true,
+    "onceDelay": 0,
+    "payload": "benchmark",
+    "payloadType": "str",
+    "repeat": "",
+    "crontab": "",
+    "props": [
+      { "p": "payload" },
+      { "p": "topic", "vt": "str" }
+    ],
+    "topic": "bench",
+    "wires": [
+      ["c1c1c1c1c1c1c1c1"]
+    ]
+  },
+  {
+    "id": "c1c1c1c1c1c1c1c1",
+    "name": "bench-debug",
+    "type": "debug",
+    "z": "f1a1a1a1a1a1a1a1",
+    "active": true,
+    "console": true,
+    "tosidebar": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusType": "auto",
+    "statusVal": "",
+    "wires": []
+  }
+]

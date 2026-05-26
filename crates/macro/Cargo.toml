@@ -1,5 +1,5 @@
 [package]
-name = "edgelink-macro"
+name = "rust-red-macro"
 version = "0.1.99"
 edition = "2024"
 

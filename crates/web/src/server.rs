@@ -7,9 +7,11 @@ use tokio::net::TcpListener;
 use tokio_util::sync::CancellationToken;
 use tower_http::services::ServeDir;
 
-use edgelink_core::runtime::registry::RegistryHandle;
+use rust_red_core::runtime::audit::{AuditConfig, create_audit_logger};
+use rust_red_core::runtime::registry::RegistryHandle;
 
 use crate::api::create_all_routes;
+use crate::auth::AuthConfig;
 use crate::handlers::{FlowEngineRestartCallback, WebState};
 use crate::models::*;
 
@@ -27,6 +29,13 @@ impl WebServer {
                 Arc::new(RedSystemSettings::default())
             }
         };
+
+        let audit_config = AuditConfig::load(cfg);
+        let audit_logger: Option<Arc<dyn rust_red_core::runtime::audit::AuditLogger>> =
+            Some(Arc::from(create_audit_logger(audit_config)));
+
+        let auth_config = AuthConfig::load(cfg);
+
         let web_state = Arc::new(WebState {
             red_settings: args,
             registry: tokio::sync::RwLock::new(None),
@@ -36,7 +45,12 @@ impl WebServer {
             engine: tokio::sync::RwLock::new(None),
             cancel_token: tokio::sync::RwLock::new(Some(cancel_token.clone())),
             static_dir: static_dir.into(),
-            web_handlers: edgelink_core::web::WebHandlerRegistry::new(),
+            web_handlers: rust_red_core::web::WebHandlerRegistry::new(),
+            frontend_plugins: rust_red_core::web::frontend_plugin::FrontendPluginRegistry::default(),
+            audit_logger,
+            auth_config,
+            #[cfg(feature = "cluster")]
+            cluster_manager: std::sync::RwLock::new(None),
         });
 
         // Start heartbeat task
@@ -77,7 +91,7 @@ impl WebServer {
 
     pub async fn with_engine(
         self,
-        engine: std::sync::Arc<tokio::sync::RwLock<edgelink_core::runtime::engine::Engine>>,
+        engine: std::sync::Arc<tokio::sync::RwLock<rust_red_core::runtime::engine::Engine>>,
         cancel_token: CancellationToken,
     ) -> Self {
         // Get the internal reference of Engine
@@ -96,9 +110,19 @@ impl WebServer {
         self
     }
 
+    /// Inject the cluster manager for cluster API routes.
+    #[cfg(feature = "cluster")]
+    pub fn with_cluster_manager(self, manager: std::sync::Arc<rust_red_cluster::ClusterManager>) -> Self {
+        self.state.set_cluster_manager(manager);
+        self
+    }
+
     pub fn router(&self) -> Router {
         // Create API routes (directly under root path, compatible with Node-RED frontend)
         let api_routes = create_all_routes(&self.state);
+
+        // Build routes from all registered frontend plugins
+        let plugin_router = self.state.frontend_plugins.build_router();
 
         // Static file service - use the static directory from the instance
         let static_service = ServeDir::new(&self.static_dir);
@@ -106,9 +130,10 @@ impl WebServer {
         // Use trait object for Extension so handlers using Extension<Arc<dyn WebStateCore + Send + Sync>> work
         Router::new()
             .merge(api_routes)
+            .merge(plugin_router)
             .layer(Extension(self.state.clone()))
             .layer(Extension(
-                self.state.clone() as Arc<dyn edgelink_core::web::web_state_trait::WebStateCore + Send + Sync>
+                self.state.clone() as Arc<dyn rust_red_core::web::web_state_trait::WebStateCore + Send + Sync>
             ))
             .fallback_service(static_service)
     }
@@ -118,7 +143,7 @@ impl WebServer {
         self,
         addr: std::net::SocketAddr,
         cancel_token: CancellationToken,
-    ) -> edgelink_core::Result<tokio::task::JoinHandle<()>> {
+    ) -> rust_red_core::Result<tokio::task::JoinHandle<()>> {
         let router = self.router();
         let listener = TcpListener::bind(&addr).await?;
         Ok(tokio::spawn(async move {

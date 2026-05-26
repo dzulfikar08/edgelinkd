@@ -1,0 +1,62 @@
+wasm_plugin_dir = "/tmp/rust-red-plugins"
+
+[runtime]
+
+[runtime.engine]
+
+[runtime.context]
+default = "memory"
+
+[runtime.context.stores]
+memory = { provider = "memory" }
+
+
+[runtime.flow]
+node_msg_queue_capacity = 16
+
+# Security settings (secure by default)
+[security]
+require_auth = true
+max_flow_size = 10485760  # 10 MB
+rate_limit_rpm = 300
+cors_origins = []
+security_headers = true
+
+# Authentication and RBAC settings
+# Uncomment and configure to enable authentication.
+# [auth]
+# enabled = true
+# token_secret = "change-me-in-production"   # MUST change for production
+# access_token_ttl_secs = 900                # 15 minutes
+# refresh_token_ttl_secs = 604800            # 7 days
+# default_role = "viewer"
+
+# Marketplace settings
+[marketplace]
+enabled = true
+max_plugin_size_bytes = 10485760  # 10 MB
+require_verification = true
+
+# AI Assistant settings
+# Uncomment and configure to enable AI-powered assistance.
+# [ai]
+# enabled = true
+# default_provider = "openai-compatible"
+#
+# [ai.providers.openai_compatible]
+# base_url = "http://localhost:11434/v1"   # Ollama default
+# model = "llama3"
+# api_key = ""                              # Leave empty for local servers
+# max_tokens = 4096
+# temperature = 0.7
+#
+# [ai.providers.anthropic]
+# api_key = "sk-ant-..."
+# model = "claude-sonnet-4-20250514"
+# max_tokens = 4096
+# api_version = "2023-06-01"
+# base_url = "https://api.anthropic.com"
+#
+# [ai.providers.local_wasm]
+# enabled = false
+# model_path = ""

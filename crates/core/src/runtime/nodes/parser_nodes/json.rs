@@ -5,7 +5,7 @@ use std::sync::Arc;
 use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
-use edgelink_macro::*;
+use rust_red_macro::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Default)]
 enum JsonAction {
@@ -98,15 +98,23 @@ impl JsonNode {
                 JsonAction::Auto => {
                     // Auto-detect: if string or buffer, try to parse; if object/array/bool/number, stringify
                     match &value {
-                        Variant::String(s) => self.parse_json_string(s),
+                        Variant::String(s) => {
+                            match self.parse_json_string(s) {
+                                Ok(v) => Ok(v),
+                                Err(_) => {
+                                    // Not valid JSON — pass through unchanged in auto mode
+                                    Ok(value)
+                                }
+                            }
+                        }
                         Variant::Bytes(bytes) => {
                             // Handle byte arrays (like Node.js Buffer)
                             match String::from_utf8(bytes.clone()) {
-                                Ok(utf8_string) => self.parse_json_string(&utf8_string),
-                                Err(_) => Err(crate::EdgelinkError::InvalidOperation(
-                                    "Buffer contains invalid UTF-8".to_string(),
-                                )
-                                .into()),
+                                Ok(utf8_string) => match self.parse_json_string(&utf8_string) {
+                                    Ok(v) => Ok(v),
+                                    Err(_) => Ok(value),
+                                },
+                                Err(_) => Ok(value),
                             }
                         }
                         // Only treat as buffer-like in Parse mode, not in Auto/Stringify
@@ -127,7 +135,7 @@ impl JsonNode {
                             // Handle byte arrays
                             match String::from_utf8(bytes.clone()) {
                                 Ok(utf8_string) => self.parse_json_string(&utf8_string),
-                                Err(_) => Err(crate::EdgelinkError::InvalidOperation(
+                                Err(_) => Err(crate::RustRedError::InvalidOperation(
                                     "Buffer contains invalid UTF-8".to_string(),
                                 )
                                 .into()),
@@ -140,10 +148,10 @@ impl JsonNode {
                                 .map(|v| match v {
                                     Variant::Number(n) => {
                                         n.as_u64().and_then(|n| if n <= 255 { Some(n as u8) } else { None }).ok_or_else(
-                                            || crate::EdgelinkError::InvalidOperation("Invalid byte value".to_string()),
+                                            || crate::RustRedError::InvalidOperation("Invalid byte value".to_string()),
                                         )
                                     }
-                                    _ => Err(crate::EdgelinkError::InvalidOperation(
+                                    _ => Err(crate::RustRedError::InvalidOperation(
                                         "Buffer array must contain only numbers".to_string(),
                                     )),
                                 })
@@ -152,7 +160,7 @@ impl JsonNode {
                             match bytes {
                                 Ok(byte_vec) => match String::from_utf8(byte_vec) {
                                     Ok(utf8_string) => self.parse_json_string(&utf8_string),
-                                    Err(_) => Err(crate::EdgelinkError::InvalidOperation(
+                                    Err(_) => Err(crate::RustRedError::InvalidOperation(
                                         "Buffer contains invalid UTF-8".to_string(),
                                     )
                                     .into()),
@@ -203,7 +211,7 @@ impl JsonNode {
     fn parse_json_string(&self, s: &str) -> crate::Result<Variant> {
         match serde_json::from_str::<JsonValue>(s) {
             Ok(parsed_json) => Ok(json_value_to_variant(parsed_json)),
-            Err(e) => Err(crate::EdgelinkError::InvalidOperation(format!("JSON parse error: {e}")).into()),
+            Err(e) => Err(crate::RustRedError::InvalidOperation(format!("JSON parse error: {e}")).into()),
         }
     }
 
@@ -216,10 +224,10 @@ impl JsonNode {
         let json_value = variant_to_json_value(value);
         let json_string = if self.config.pretty {
             serde_json::to_string_pretty(&json_value)
-                .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("JSON stringify error: {e}")))?
+                .map_err(|e| crate::RustRedError::InvalidOperation(format!("JSON stringify error: {e}")))?
         } else {
             serde_json::to_string(&json_value)
-                .map_err(|e| crate::EdgelinkError::InvalidOperation(format!("JSON stringify error: {e}")))?
+                .map_err(|e| crate::RustRedError::InvalidOperation(format!("JSON stringify error: {e}")))?
         };
         Ok(Variant::String(json_string))
     }

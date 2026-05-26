@@ -1,0 +1,19 @@
+[
+  {
+    "id": "tab2",
+    "label": "Test2",
+    "type": "tab"
+  },
+  {
+    "config_node": "",
+    "id": "n2",
+    "name": "test2",
+    "query": "SELECT 1",
+    "timeout_ms": 30000,
+    "type": "postgres-query",
+    "wires": [
+      []
+    ],
+    "z": "tab2"
+  }
+]
