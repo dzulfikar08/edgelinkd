@@ -68,6 +68,7 @@ inventory.workspace = true
 arrayvec = { workspace = true, features = ["std", "serde"] }
 notify = { version = "^8.0", optional = true }
 rumqttc = { version = "0.24", optional = true }
+rust-red-mqtt-broker = { path = "../mqtt-broker", optional = true }
 tokio-tungstenite = { workspace = true, optional = true, features = ["rustls-tls-native-roots"] }
 futures-util = { version = "0.3", optional = true }
 reqwest = { workspace = true, optional = true }
@@ -112,7 +113,7 @@ rqjs_bindgen = ["rquickjs/bindgen"]
 nodes_network = ["nodes_mqtt", "nodes_udp", "nodes_tcp", "nodes_http", "nodes_websocket"]
 nodes_parser = ["nodes_xml", "nodes_yaml", "nodes_html"]
 nodes_storage = ["nodes_storage_watch"]
-nodes_mqtt = ["rumqttc"]
+nodes_mqtt = ["rumqttc", "dep:rust-red-mqtt-broker"]
 nodes_http = ["tokio/net", "dep:reqwest", "urlencoding"]
 nodes_tcp = ["tokio/net"]
 nodes_udp = ["tokio/net"]

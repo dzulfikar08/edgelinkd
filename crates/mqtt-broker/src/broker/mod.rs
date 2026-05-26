@@ -149,6 +149,50 @@ impl MqttBroker {
         Ok(local_addr)
     }
 
+    /// Start the broker, accepting connections until `cancel` is fired.
+    /// Returns the bound address on success.
+    pub async fn start_with_cancel(self: Arc<Self>, cancel: tokio_util::sync::CancellationToken) -> BrokerResult<SocketAddr> {
+        let addr: SocketAddr = self.config.bind.parse()
+            .map_err(|e: std::net::AddrParseError| BrokerError::ProtocolError(format!("Invalid bind address: {e}")))?;
+        let listener = TcpListener::bind(addr).await
+            .map_err(|e| BrokerError::ProtocolError(format!("Failed to bind: {e}")))?;
+        let local_addr = listener.local_addr()
+            .map_err(BrokerError::Io)?;
+        log::info!("[mqtt-broker] Listening on {}", local_addr);
+
+        loop {
+            tokio::select! {
+                _ = cancel.cancelled() => {
+                    log::info!("[mqtt-broker] Stopped");
+                    break;
+                }
+                result = listener.accept() => {
+                    match result {
+                        Ok((stream, peer)) => {
+                            let broker = self.clone();
+                            self.metrics.total_connections.fetch_add(1, Ordering::Relaxed);
+                            self.metrics.active_connections.fetch_add(1, Ordering::Relaxed);
+                            tokio::spawn(async move {
+                                log::debug!("[mqtt-broker] New connection from {}", peer);
+                                if let Err(e) = broker.handle_connection(stream).await {
+                                    if !e.to_string().contains("ConnectionClosed") {
+                                        log::warn!("[mqtt-broker] Connection error from {}: {}", peer, e);
+                                    }
+                                }
+                                broker.metrics.active_connections.fetch_sub(1, Ordering::Relaxed);
+                            });
+                        }
+                        Err(e) => {
+                            log::error!("[mqtt-broker] Accept error: {}", e);
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(local_addr)
+    }
+
     async fn handle_connection(&self, stream: TcpStream) -> BrokerResult<()> {
         // Split the TCP stream into read and write halves
         let (mut read_half, mut write_half) = tokio::io::split(stream);

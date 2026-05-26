@@ -119,6 +119,7 @@ const CUSTOM_NODE_TYPES: &[&str] = &[
     "modbus-flex-getter", "modbus-flex-writer", "modbus-server",
     "opcua-config", "opcua read", "opcua write",
     "bacnet-config", "bacnet read", "bacnet write",
+    "mqtt broker embedded",
 ];
 
 fn is_custom_node(module: &str, type_: &str) -> bool {
@@ -201,6 +202,7 @@ fn get_palette_label(type_name: &str) -> String {
         "modbus-flex-writer" => "flex writer".to_string(),
         "modbus-config" => "Modbus Client".to_string(),
         "modbus-server" => "Modbus Server".to_string(),
+        "mqtt broker embedded" => "MQTT Broker".to_string(),
         _ => type_name.to_string(),
     }
 }
@@ -240,6 +242,21 @@ fn get_node_help_html(type_name: &str) -> String {
 </dl>
 <h3>Details</h3>
 <p>Supports FC1-6, FC15-16 (read/write coils and registers). Connect a debug node to the output to monitor all server activity. Use with <code>modbus read</code>/<code>modbus write</code> nodes for end-to-end testing without physical hardware.</p>"#.to_string(),
+
+        "mqtt broker embedded" => r#"<p>Embedded MQTT 3.1.1 broker. Runs a full MQTT server as part of your flow.</p>
+<h3>Properties</h3>
+<dl class="message-properties">
+    <dt>Host <span class="property-type">string</span></dt><dd>Bind address (default: 127.0.0.1)</dd>
+    <dt>Port <span class="property-type">number</span></dt><dd>Listen port (default: 1883)</dd>
+    <dt>Max Connections <span class="property-type">number</span></dt><dd>Maximum concurrent client connections (default: 100)</dd>
+</dl>
+<h3>Outputs</h3>
+<dl class="message-properties">
+    <dt>topic: broker/start</dt><dd>Emitted when broker starts. Payload contains host and port.</dd>
+    <dt>topic: broker/metrics</dt><dd>Emitted every 30 seconds with connection and message counters.</dd>
+</dl>
+<h3>Details</h3>
+<p>Supports QoS 0/1/2, retained messages, wildcards (+/#), and will messages. Connect <code>mqtt in</code> and <code>mqtt out</code> nodes to this broker by setting their broker URL to <code>localhost:&lt;port&gt;</code>. Ideal for local testing, edge scenarios, and decoupled microservice communication without an external broker.</p>"#.to_string(),
 
         "modbus read" => r#"<p>Reads data from a Modbus device. Supports polling and trigger-based reads.</p>
 <h3>Properties</h3>
@@ -515,6 +532,12 @@ fn get_flow_node_template_html(type_name: &str) -> String {
             html.push_str(&form_row_number("bars", "Coil Count", "node-input-coilCount", "100"));
             html.push_str(&form_row_number("bars", "Register Count", "node-input-registerCount", "100"));
         }
+        "mqtt broker embedded" => {
+            html.push_str(&name_row());
+            html.push_str(&form_row("server", "Host", "node-input-host", "127.0.0.1"));
+            html.push_str(&form_row_number("cog", "Port", "node-input-port", "1883"));
+            html.push_str(&form_row_number("users", "Max Connections", "node-input-max_connections", "100"));
+        }
         "opcua read" => {
             html.push_str(&name_row());
             html.push_str(&form_row_config_node(type_name, "Server"));
@@ -705,6 +728,11 @@ fn get_flow_node_defaults(type_name: &str) -> String {
             d.push_str("            port: {value:5020},\n");
             d.push_str("            coilCount: {value:100},\n");
             d.push_str("            registerCount: {value:100},\n");
+        }
+        "mqtt broker embedded" => {
+            d.push_str("            host: {value:\"127.0.0.1\"},\n");
+            d.push_str("            port: {value:1883},\n");
+            d.push_str("            max_connections: {value:100},\n");
         }
         "bacnet write" => {
             d.push_str("            address: {value:0},\n");
