@@ -32,6 +32,9 @@ struct OpcUaConfig {
     /// Session timeout in milliseconds (default: 30000).
     #[serde(default = "default_session_timeout_ms")]
     session_timeout_ms: u32,
+    /// Authentication method: "anonymous", "credentials", or "certificate".
+    #[serde(default)]
+    auth_method: Option<String>,
 }
 
 fn default_security_mode() -> String {

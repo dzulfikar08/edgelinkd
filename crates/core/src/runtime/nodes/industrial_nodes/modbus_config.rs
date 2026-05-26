@@ -23,6 +23,21 @@ struct ModbusConfig {
     unit_id: u8,
     #[serde(default = "default_timeout_ms")]
     timeout_ms: u64,
+    // Serial RTU (round-trip until runtime support)
+    serial_port: Option<String>,
+    baud_rate: Option<u32>,
+    data_bits: Option<String>,
+    stop_bits: Option<String>,
+    parity: Option<String>,
+    // Queue options (round-trip until runtime support)
+    parallel_unit_ids: Option<bool>,
+    queue_log_enabled: Option<bool>,
+    buffer_commands: Option<bool>,
+    command_delay: Option<u64>,
+    // Connection options (round-trip until runtime support)
+    keep_alive: Option<bool>,
+    reconnect_timeout: Option<u64>,
+    auto_connect: Option<bool>,
 }
 
 fn default_transport() -> String {

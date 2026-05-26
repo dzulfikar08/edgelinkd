@@ -731,7 +731,7 @@ fn get_flow_node_template_html(type_name: &str) -> String {
             html.push_str(&form_row_select("cog", "Action", "node-input-action", &[
                 ("read", "Read"), ("subscribe", "Subscribe"), ("monitor", "Monitor"),
             ]));
-            html.push_str(&form_row("crosshairs", "Node ID", "node-input-node_id", "ns=2;s=Temperature"));
+            html.push_str(&form_row("crosshairs", "Node ID", "node-input-nodeId", "ns=2;s=Temperature"));
             html.push_str(&conditional_section_start("or-interval-section"));
             html.push_str(&form_row_number("clock", "Interval (ms)", "node-input-intervalMs", "1000"));
             html.push_str(conditional_section_end());
@@ -746,7 +746,7 @@ fn get_flow_node_template_html(type_name: &str) -> String {
         "opcua write" => {
             html.push_str(&name_row());
             html.push_str(&form_row_config_node(type_name, "Server"));
-            html.push_str(&form_row("crosshairs", "Node ID", "node-input-node_id", "ns=2;s=Setpoint"));
+            html.push_str(&form_row("crosshairs", "Node ID", "node-input-nodeId", "ns=2;s=Setpoint"));
         }
         "bacnet read" => {
             html.push_str(&name_row());
@@ -872,8 +872,8 @@ fn get_global_node_template_html(type_name: &str) -> String {
             html.push_str(&cfg_form_row_password("lock", "Password", "password"));
             html.push_str(conditional_section_end());
             html.push_str(&conditional_section_start("oc-certificate-section"));
-            html.push_str(&cfg_form_row("file", "Certificate Path", "certificatePath", ""));
-            html.push_str(&cfg_form_row("key", "Private Key Path", "privateKeyPath", ""));
+            html.push_str(&cfg_form_row("file", "Certificate Path", "certPath", ""));
+            html.push_str(&cfg_form_row("key", "Private Key Path", "keyPath", ""));
             html.push_str(conditional_section_end());
             html.push_str(tab_content_end());
             html.push_str(tab_bar_close());
@@ -1007,13 +1007,13 @@ fn get_flow_node_defaults(type_name: &str) -> String {
             d.push_str("            address: {value:0},\n");
         }
         "opcua read" => {
-            d.push_str("            node_id: {value:\"\", required: true},\n");
+            d.push_str("            nodeId: {value:\"\", required: true},\n");
             d.push_str("            action: {value:\"read\"},\n");
             d.push_str("            intervalMs: {value:1000},\n");
             d.push_str("            deadband: {value:0},\n");
         }
         "opcua write" => {
-            d.push_str("            node_id: {value:\"\", required: true},\n");
+            d.push_str("            nodeId: {value:\"\", required: true},\n");
         }
         _ => {}
     }
@@ -1082,8 +1082,8 @@ fn get_global_node_defaults(type_name: &str) -> String {
             d.push_str("            authMethod: {value:\"anonymous\"},\n");
             d.push_str("            username: {value:\"\"},\n");
             d.push_str("            password: {value:\"\"},\n");
-            d.push_str("            certificatePath: {value:\"\"},\n");
-            d.push_str("            privateKeyPath: {value:\"\"},\n");
+            d.push_str("            certPath: {value:\"\"},\n");
+            d.push_str("            keyPath: {value:\"\"},\n");
         }
         "bacnet-config" => {
             d.push_str("            device_id: {value:0},\n");

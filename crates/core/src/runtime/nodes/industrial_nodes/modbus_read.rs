@@ -29,6 +29,27 @@ struct ModbusReadConfig {
     data_type: ModbusDataType,
     #[serde(default, rename = "pollIntervalMs")]
     poll_interval_ms: Option<u64>,
+    #[serde(default, rename = "pollRate")]
+    poll_rate: Option<u64>,
+    #[serde(default, rename = "pollRateUnit")]
+    poll_rate_unit: Option<String>,
+}
+
+impl ModbusReadConfig {
+    fn effective_poll_interval_ms(&self) -> Option<u64> {
+        if let Some(rate) = self.poll_rate {
+            let unit = self.poll_rate_unit.as_deref().unwrap_or("ms");
+            let multiplier = match unit {
+                "s" => 1000,
+                "min" => 60_000,
+                "hr" => 3_600_000,
+                _ => 1, // "ms"
+            };
+            Some(rate * multiplier)
+        } else {
+            self.poll_interval_ms
+        }
+    }
 }
 
 fn default_fc() -> String {
@@ -137,7 +158,7 @@ impl FlowNodeBehavior for ModbusReadNode {
         };
 
         // If polling configured, spawn a poll loop
-        let poll_handle = if let Some(interval_ms) = self.config.poll_interval_ms {
+        let poll_handle = if let Some(interval_ms) = self.config.effective_poll_interval_ms() {
             let this = self.clone();
             let cfg = config_node.clone();
             let cancel = stop_token.child_token();

@@ -25,6 +25,9 @@ struct PostgresConfig {
     pool_max_size: u32,
     #[serde(default = "default_connect_timeout_ms")]
     connect_timeout_ms: u64,
+    ssl: Option<bool>,
+    idle_timeout_ms: Option<u64>,
+    application_name: Option<String>,
 }
 
 fn default_port() -> u16 {

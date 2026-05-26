@@ -23,6 +23,10 @@ struct OpcUaReadConfig {
     /// Action to perform: "read" (default) or "browse".
     #[serde(default = "default_action")]
     action: String,
+    #[serde(default, rename = "intervalMs")]
+    interval_ms: Option<u64>,
+    #[serde(default)]
+    deadband: Option<f64>,
 }
 
 fn default_attribute() -> String {

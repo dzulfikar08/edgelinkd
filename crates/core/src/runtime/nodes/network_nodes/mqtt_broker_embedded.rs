@@ -19,6 +19,13 @@ struct MqttBrokerNodeConfig {
     port: u16,
     #[serde(default = "default_max_connections")]
     max_connections: usize,
+    #[serde(default, rename = "wsEnabled")]
+    ws_enabled: Option<bool>,
+    #[serde(default, rename = "wsPath")]
+    ws_path: Option<String>,
+    persistence: Option<String>,
+    username: Option<String>,
+    password: Option<String>,
 }
 
 fn default_host() -> String { "127.0.0.1".to_string() }
@@ -65,6 +72,10 @@ impl FlowNodeBehavior for MqttBrokerEmbeddedNode {
             enabled: true,
             bind: format!("{}:{}", self.config.host, self.config.port),
             max_connections: self.config.max_connections,
+            auth: rust_red_mqtt_broker::config::AuthConfig {
+                username: self.config.username.clone(),
+                password: self.config.password.clone(),
+            },
             ..Default::default()
         };
 
