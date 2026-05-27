@@ -1,8 +1,0 @@
-[      37ms] [LOG] JQMIGRATE: Migrate is installed, version 3.5.2 @ http://localhost:1888/vendor/vendor.js:2
-[     104ms] [LOG] Node-RED: 3.1.0 @ http://localhost:1888/red/red.min.js:15
-[     104ms] [LOG] jQuery 3.7.1 @ http://localhost:1888/red/red.min.js:15
-[     104ms] [LOG] jQuery UI 1.14.1 @ http://localhost:1888/red/red.min.js:15
-[     105ms] [LOG] ACE 1.4.12 @ http://localhost:1888/red/red.min.js:15
-[     105ms] [LOG] MONACO 0.52.2 @ http://localhost:1888/red/red.min.js:15
-[     105ms] [LOG] D3 3.0.3 @ http://localhost:1888/red/red.min.js:15
-[     133ms] [LOG] Projects disabled @ http://localhost:1888/red/red.min.js:15

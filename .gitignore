@@ -12,3 +12,11 @@ __pycache__
 # Frontend
 crates/frontend/node_modules
 crates/frontend/dist
+
+# Playwright MCP logs and screenshots
+.playwright-mcp/
+*.png
+!3rd-party/node-red/**/*.png
+
+# Misc
+audit.log
