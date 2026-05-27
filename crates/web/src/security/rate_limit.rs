@@ -66,25 +66,23 @@ impl RateLimiter {
 /// or fall back to a fixed key if no IP information is available.
 fn extract_client_key(headers: &HeaderMap) -> String {
     // Try X-Forwarded-For first (standard proxy header)
-    if let Some(xff) = headers.get("x-forwarded-for") {
-        if let Ok(val) = xff.to_str() {
-            // Take the first IP in the list (original client)
-            if let Some(ip) = val.split(',').next() {
-                let ip = ip.trim();
-                if !ip.is_empty() {
-                    return format!("ip:{ip}");
-                }
-            }
+    if let Some(xff) = headers.get("x-forwarded-for")
+        && let Ok(val) = xff.to_str()
+        && let Some(ip) = val.split(',').next()
+    {
+        let ip = ip.trim();
+        if !ip.is_empty() {
+            return format!("ip:{ip}");
         }
     }
 
     // Try X-Real-IP (nginx, etc.)
-    if let Some(xri) = headers.get("x-real-ip") {
-        if let Ok(val) = xri.to_str() {
-            let ip = val.trim();
-            if !ip.is_empty() {
-                return format!("ip:{ip}");
-            }
+    if let Some(xri) = headers.get("x-real-ip")
+        && let Ok(val) = xri.to_str()
+    {
+        let ip = val.trim();
+        if !ip.is_empty() {
+            return format!("ip:{ip}");
         }
     }
 

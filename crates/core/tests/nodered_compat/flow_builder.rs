@@ -17,6 +17,7 @@ impl FlowBuilder {
     }
 
     /// Create a new flow builder with a custom tab ID.
+    #[allow(dead_code)]
     pub fn with_tab_id(tab_id: &str) -> Self {
         Self { nodes: vec![json!({"id": tab_id, "type": "tab", "label": "Test Flow"})] }
     }
@@ -327,6 +328,7 @@ impl FlowBuilder {
     }
 
     /// Convert the builder into a JSON string.
+    #[allow(dead_code)]
     pub fn to_json_string(self) -> String {
         serde_json::to_string(&self.to_json()).unwrap()
     }
@@ -410,6 +412,7 @@ pub mod switch_rule {
         json!({"t": "else"})
     }
 
+    #[allow(dead_code)]
     pub fn jsonata(expression: &str) -> Value {
         json!({"t": "jsonata_exp", "v": expression, "vt": "jsonata"})
     }

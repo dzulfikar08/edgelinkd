@@ -70,6 +70,12 @@ struct UserStoreInner {
     api_keys: HashMap<String, ApiKey>,       // prefix -> ApiKey
 }
 
+impl Default for UserStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UserStore {
     /// Create a new empty user store.
     pub fn new() -> Self {

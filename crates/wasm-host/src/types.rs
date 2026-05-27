@@ -50,9 +50,10 @@ pub struct WasmMessage {
 
 /// Dynamic value type that can cross the WASM boundary.
 /// Uses explicit tagged variants for reliable postcard serialization.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub enum WasmValue {
     /// Null / absent
+    #[default]
     Null,
     /// Boolean
     Bool(bool),
@@ -70,12 +71,6 @@ pub enum WasmValue {
     Array(Vec<WasmValue>),
     /// Object / map
     Object(BTreeMap<String, WasmValue>),
-}
-
-impl Default for WasmValue {
-    fn default() -> Self {
-        WasmValue::Null
-    }
 }
 
 impl WasmValue {

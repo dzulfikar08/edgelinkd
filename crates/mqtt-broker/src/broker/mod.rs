@@ -265,10 +265,8 @@ impl MqttBroker {
 
         // Publish will message on abnormal disconnect
         if result.is_err() {
-            if let Some((will_topic, will_payload, will_qos, will_retain)) = will_info {
-                if let Some(payload) = will_payload {
-                    let _ = self.handle_publish_inner(&will_topic, &payload, will_qos, will_retain).await;
-                }
+            if let Some((will_topic, Some(will_payload), will_qos, will_retain)) = will_info {
+                let _ = self.handle_publish_inner(&will_topic, &will_payload, will_qos, will_retain).await;
             }
         }
 

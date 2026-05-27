@@ -5,7 +5,6 @@
 
 use serde_json::json;
 
-use super::flow_builder::FlowBuilder;
 use super::harness::{TestHarness, assert_msg_has};
 
 /// Catch node captures errors from function nodes.

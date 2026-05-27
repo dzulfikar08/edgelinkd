@@ -54,12 +54,9 @@ pub async fn get_global_context(Extension(state): Extension<Arc<WebState>>) -> R
     if let Some(engine) = engine_guard.as_ref() {
         let cm = engine.get_context_manager();
         let store = cm.get_default_store();
-        match store.get_all("global").await {
-            Ok(data) => {
-                let store_name = store.name().await;
-                return Ok(Json(format_context_response(data, &store_name)));
-            }
-            Err(_) => {}
+        if let Ok(data) = store.get_all("global").await {
+            let store_name = store.name().await;
+            return Ok(Json(format_context_response(data, &store_name)));
         }
     }
     Ok(Json(serde_json::json!({"default": {}})))
@@ -76,10 +73,10 @@ pub async fn get_global_context_key(
         let cm = engine.get_context_manager();
         let store_name = params.get("store").map(|s| s.as_str()).unwrap_or("default");
         let store = cm.get_context_store(store_name).unwrap_or(cm.get_default_store());
-        if let Ok(path) = propex::parse(&key) {
-            if let Ok(variant) = store.get_one("global", &path).await {
-                return Ok(Json(format_single_entry(&variant)));
-            }
+        if let Ok(path) = propex::parse(&key)
+            && let Ok(variant) = store.get_one("global", &path).await
+        {
+            return Ok(Json(format_single_entry(&variant)));
         }
     }
     Ok(Json(serde_json::json!({"msg": "undefined", "format": "undefined"})))
@@ -111,12 +108,9 @@ pub async fn get_flow_context(
         let cm = engine.get_context_manager();
         let store = cm.get_default_store();
         let scope = format!("flow:{}", flow_id);
-        match store.get_all(&scope).await {
-            Ok(data) => {
-                let store_name = store.name().await;
-                return Ok(Json(format_context_response(data, &store_name)));
-            }
-            Err(_) => {}
+        if let Ok(data) = store.get_all(&scope).await {
+            let store_name = store.name().await;
+            return Ok(Json(format_context_response(data, &store_name)));
         }
     }
     Ok(Json(serde_json::json!({"default": {}})))
@@ -134,10 +128,10 @@ pub async fn get_flow_context_key(
         let store_name = params.get("store").map(|s| s.as_str()).unwrap_or("default");
         let store = cm.get_context_store(store_name).unwrap_or(cm.get_default_store());
         let scope = format!("flow:{}", flow_id);
-        if let Ok(path) = propex::parse(&key) {
-            if let Ok(variant) = store.get_one(&scope, &path).await {
-                return Ok(Json(format_single_entry(&variant)));
-            }
+        if let Ok(path) = propex::parse(&key)
+            && let Ok(variant) = store.get_one(&scope, &path).await
+        {
+            return Ok(Json(format_single_entry(&variant)));
         }
     }
     Ok(Json(serde_json::json!({"msg": "undefined", "format": "undefined"})))
@@ -169,12 +163,9 @@ pub async fn get_node_context(
     if let Some(engine) = engine_guard.as_ref() {
         let cm = engine.get_context_manager();
         let store = cm.get_default_store();
-        match store.get_all(&node_id).await {
-            Ok(data) => {
-                let store_name = store.name().await;
-                return Ok(Json(format_context_response(data, &store_name)));
-            }
-            Err(_) => {}
+        if let Ok(data) = store.get_all(&node_id).await {
+            let store_name = store.name().await;
+            return Ok(Json(format_context_response(data, &store_name)));
         }
     }
     Ok(Json(serde_json::json!({"default": {}})))
@@ -191,10 +182,10 @@ pub async fn get_node_context_key(
         let cm = engine.get_context_manager();
         let store_name = params.get("store").map(|s| s.as_str()).unwrap_or("default");
         let store = cm.get_context_store(store_name).unwrap_or(cm.get_default_store());
-        if let Ok(path) = propex::parse(&key) {
-            if let Ok(variant) = store.get_one(&node_id, &path).await {
-                return Ok(Json(format_single_entry(&variant)));
-            }
+        if let Ok(path) = propex::parse(&key)
+            && let Ok(variant) = store.get_one(&node_id, &path).await
+        {
+            return Ok(Json(format_single_entry(&variant)));
         }
     }
     Ok(Json(serde_json::json!({"msg": "undefined", "format": "undefined"})))

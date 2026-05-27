@@ -1,0 +1,293 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - img [ref=e4]
+      - text: Rust-Red
+    - list [ref=e5]:
+      - listitem [ref=e6]:
+        - link "Deploy" [ref=e8]:
+          - /url: "#"
+          - generic [ref=e9]: Deploy
+      - listitem [ref=e10]:
+        - link "" [ref=e11] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e12]: 
+      - listitem [ref=e13]:
+        - link "" [ref=e14] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e15]: 
+        - text:    
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - list [ref=e20]:
+          - listitem [ref=e21]:
+            - link "Test Flow" [ref=e22] [cursor=pointer]:
+              - /url: "#a1b2c3d4e5f60001"
+              - text:   Test Flow
+            - generic: 
+        - link "" [ref=e24] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e25]: 
+        - link "" [ref=e27] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e28]: 
+        - generic [ref=e29]: 
+        - generic [ref=e30]: 
+      - img [ref=e32]:
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - generic:
+              - generic: Insert to PostgreSQL
+          - generic [ref=e45]:
+            - generic:
+              - generic: Debug Output ⇲
+          - generic [ref=e52]:
+            - generic:
+              - generic: modbus-write
+          - generic [ref=e58]:
+            - generic:
+              - generic: timestamp
+          - generic [ref=e65]:
+            - generic:
+              - generic: debug 1
+          - generic [ref=e72]:
+            - generic:
+              - generic: modbus-read
+            - generic [ref=e77]: "Invalid address: invalid socket address syntax"
+          - generic [ref=e82]:
+            - generic:
+              - generic: timestamp
+          - generic [ref=e89]:
+            - generic:
+              - generic: debug 2
+      - generic [ref=e96]:
+        - generic [ref=e98]:
+          - button "" [ref=e100] [cursor=pointer]:
+            - generic [ref=e101]: 
+          - text:   
+        - generic [ref=e102]:
+          - button "" [ref=e104] [cursor=pointer]:
+            - generic [ref=e105]: 
+          - generic [ref=e107]:
+            - button "" [ref=e108] [cursor=pointer]:
+              - generic [ref=e109]: 
+            - button "" [ref=e110] [cursor=pointer]:
+              - generic [ref=e111]: 
+            - button "" [ref=e112] [cursor=pointer]:
+              - generic [ref=e113]: 
+    - generic [ref=e114]:
+      - generic [ref=e116]:
+        - generic: 
+        - textbox "filter nodes" [ref=e118]
+        - text: 
+      - generic [ref=e119]:
+        - text: 
+        - generic [ref=e120]:
+          - generic [ref=e121] [cursor=pointer]:
+            - generic [ref=e122]: 
+            - text: common
+          - generic [ref=e124]:
+            - generic [ref=e126]: complete
+            - generic [ref=e131]: debug
+            - generic [ref=e136]: catch
+            - generic [ref=e141]: comment
+            - generic [ref=e145]: inject
+            - generic [ref=e150]: status
+            - generic [ref=e155]: link in
+            - generic [ref=e160]: link call
+            - generic [ref=e166]: link out
+        - generic [ref=e170]:
+          - generic [ref=e171] [cursor=pointer]:
+            - generic [ref=e172]: 
+            - text: function
+          - generic [ref=e174]:
+            - generic [ref=e176]: change
+            - generic [ref=e182]: delay
+            - generic [ref=e188]: function
+            - generic [ref=e194]: exec
+            - generic [ref=e200]: template
+            - generic [ref=e206]: filter
+            - generic [ref=e212]: range
+            - generic [ref=e218]: trigger
+            - generic [ref=e224]: switch
+            - generic [ref=e230]:
+              - text: ui_dashboard
+              - text: _data
+            - generic [ref=e236]:
+              - text: console -
+              - text: json
+        - generic [ref=e241]:
+          - generic [ref=e242] [cursor=pointer]:
+            - generic [ref=e243]: 
+            - text: network
+          - generic [ref=e245]:
+            - generic [ref=e247]: http in
+            - generic [ref=e252]: http response
+            - generic [ref=e257]: http request
+            - generic [ref=e263]: udp in
+            - generic [ref=e268]: udp out
+            - generic [ref=e273]: mqtt in
+            - generic [ref=e278]: mqtt out
+            - generic [ref=e283]: websocket in
+            - generic [ref=e288]:
+              - text: websocket
+              - text: out
+            - generic [ref=e293]: tcp in
+            - generic [ref=e298]: tcp out
+            - generic [ref=e303]: tcp request
+        - text:  
+        - generic [ref=e308]:
+          - generic [ref=e309] [cursor=pointer]:
+            - generic [ref=e310]: 
+            - text: sequence
+          - generic [ref=e312]:
+            - generic [ref=e314]: batch
+            - generic [ref=e320]: sort
+            - generic [ref=e326]: split
+            - generic [ref=e332]: join
+        - generic [ref=e337]:
+          - generic [ref=e338] [cursor=pointer]:
+            - generic [ref=e339]: 
+            - text: parser
+          - generic [ref=e341]:
+            - generic [ref=e343]: yaml
+            - generic [ref=e349]: json
+            - generic [ref=e355]: html
+            - generic [ref=e361]: csv
+            - generic [ref=e367]: xml
+        - generic [ref=e372]:
+          - generic [ref=e373] [cursor=pointer]:
+            - generic [ref=e374]: 
+            - text: storage
+          - generic [ref=e376]:
+            - generic [ref=e378]: write file
+            - generic [ref=e384]: read file
+            - generic [ref=e390]: watch
+            - generic [ref=e395]: opcua read
+            - generic [ref=e401]: sqlite - query
+            - generic [ref=e407]:
+              - text: timescaledb -
+              - text: query
+            - generic [ref=e413]: bacnet write
+            - generic [ref=e419]: influxdb - out
+            - generic [ref=e425]: bacnet read
+            - generic [ref=e431]: opcua write
+            - generic [ref=e437]: influxdb - in
+            - generic [ref=e443]:
+              - text: postgres -
+              - text: query
+            - generic [ref=e449]: mssql - query
+        - text:   
+        - generic [ref=e454]:
+          - generic [ref=e455] [cursor=pointer]:
+            - generic [ref=e456]: 
+            - text: modbus
+          - generic [ref=e458]:
+            - generic [ref=e460]: read
+            - generic [ref=e466]: write
+            - generic [ref=e472]: flex getter
+            - generic [ref=e478]: flex writer
+      - generic [ref=e484]:
+        - button "" [ref=e485] [cursor=pointer]:
+          - generic [ref=e486]: 
+        - button "" [ref=e487] [cursor=pointer]:
+          - generic [ref=e488]: 
+      - text: 
+    - generic [ref=e491]:
+      - generic [ref=e492]:
+        - list [ref=e494]:
+          - listitem [ref=e495]:
+            - link " info" [ref=e496] [cursor=pointer]:
+              - /url: "#info"
+              - generic [ref=e497]: 
+              - text: info
+          - text:    
+        - generic [ref=e498]:
+          - link "" [ref=e499]:
+            - /url: "#info"
+            - generic [ref=e500]: 
+          - link "" [ref=e501] [cursor=pointer]:
+            - /url: "#help"
+            - generic [ref=e502]: 
+          - link "" [ref=e503] [cursor=pointer]:
+            - /url: "#debug"
+            - generic [ref=e504]: 
+          - link "" [ref=e505] [cursor=pointer]:
+            - /url: "#config"
+            - generic [ref=e506]: 
+          - text: 
+          - link "" [ref=e507] [cursor=pointer]:
+            - /url: "#"
+            - generic [ref=e508]: 
+      - generic [ref=e509]:
+        - generic [ref=e511]:
+          - generic [ref=e512]:
+            - generic [ref=e514]:
+              - generic [ref=e516]:
+                - generic: 
+                - textbox "Search flows" [ref=e518]
+                - text: 
+                - link "" [ref=e519] [cursor=pointer]:
+                  - /url: "#"
+                  - generic [ref=e520]: 
+              - text: 
+              - list [ref=e525]:
+                - listitem [ref=e526]:
+                  - generic [ref=e527]:
+                    - generic [ref=e528] [cursor=pointer]:
+                      - generic [ref=e530]: 
+                      - generic [ref=e531]: Flows
+                    - list [ref=e534]:
+                      - listitem [ref=e535]:
+                        - generic [ref=e537] [cursor=pointer]:
+                          - text: 
+                          - generic [ref=e539]: 
+                          - generic [ref=e542]:
+                            - generic [ref=e543]: Test Flow
+                            - generic [ref=e544]:
+                              - button [ref=e545]:  
+                              - button [ref=e546]:  
+                              - button [ref=e547]:  
+                - listitem [ref=e548]:
+                  - generic [ref=e550] [cursor=pointer]:
+                    - generic [ref=e552]: 
+                    - generic [ref=e553]: Subflows
+                - listitem [ref=e554]:
+                  - generic [ref=e555]:
+                    - generic [ref=e556] [cursor=pointer]:
+                      - generic [ref=e558]: 
+                      - generic [ref=e559]: Global Configuration Nodes
+                    - generic:
+                      - generic:        
+            - generic [ref=e561]:
+              - generic [ref=e562]:
+                - generic [ref=e567]: Test Flow
+                - button "" [ref=e568] [cursor=pointer]:
+                  - generic [ref=e569]: 
+                - text: 
+                - button "" [ref=e570] [cursor=pointer]:
+                  - generic [ref=e571]: 
+              - table [ref=e573]:
+                - rowgroup [ref=e574]:
+                  - row "Flow \"a1b2c3d4e5f60001\"" [ref=e575]:
+                    - cell "Flow" [ref=e576]
+                    - cell "\"a1b2c3d4e5f60001\"" [ref=e577]:
+                      - generic [ref=e579]:
+                        - generic: 
+                        - generic [ref=e580]: "\"a1b2c3d4e5f60001\""
+          - generic [ref=e582]:
+            - generic [ref=e583]: info.tip0
+            - generic [ref=e584]:
+              - link "" [ref=e585] [cursor=pointer]:
+                - /url: "#"
+                - generic [ref=e586]: 
+              - link "" [ref=e587] [cursor=pointer]:
+                - /url: "#"
+                - generic [ref=e588]: 
+        - text:                                 
+      - generic [ref=e589]:   
+    - generic [ref=e590]: 
+  - text:  
+  - generic [ref=e591]: mssql - query
+  - generic: debug 2

@@ -551,7 +551,7 @@ impl Flow {
         #[cfg(feature = "otel")]
         let mut _otel_span = {
             use opentelemetry::KeyValue;
-            use opentelemetry::trace::{Span, SpanKind, Tracer};
+            use opentelemetry::trace::{SpanKind, Tracer};
             let tracer = opentelemetry::global::tracer("rust-red");
             tracer
                 .span_builder("flow_start")

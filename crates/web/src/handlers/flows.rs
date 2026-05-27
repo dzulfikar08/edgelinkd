@@ -128,18 +128,18 @@ pub async fn post_flows(
         let versioning_config = &state.red_settings.versioning;
         if versioning_config.enabled {
             let flows_path_guard_v = state.flows_file_path.read().await;
-            if let Some(flows_path) = flows_path_guard_v.as_ref() {
-                if flows_path.exists() {
-                    match load_flows_from_file(flows_path).await {
-                        Ok(current_flows) if !current_flows.is_empty() => {
-                            let store = crate::versioning::FlowVersionStore::new(flows_path, versioning_config);
-                            if let Err(e) = store.save_version(&current_flows, None).await {
-                                log::warn!("Failed to save flow version snapshot: {e}");
-                            }
+            if let Some(flows_path) = flows_path_guard_v.as_ref()
+                && flows_path.exists()
+            {
+                match load_flows_from_file(flows_path).await {
+                    Ok(current_flows) if !current_flows.is_empty() => {
+                        let store = crate::versioning::FlowVersionStore::new(flows_path, versioning_config);
+                        if let Err(e) = store.save_version(&current_flows, None).await {
+                            log::warn!("Failed to save flow version snapshot: {e}");
                         }
-                        Ok(_) => {} // empty file, skip
-                        Err(e) => log::warn!("Failed to load current flows for versioning: {e}"),
                     }
+                    Ok(_) => {} // empty file, skip
+                    Err(e) => log::warn!("Failed to load current flows for versioning: {e}"),
                 }
             }
         }
@@ -530,10 +530,10 @@ pub async fn get_credentials(
 
     // Find the config node by ID and return its nested credentials object
     for node in &flows {
-        if node.get("id").and_then(|v| v.as_str()) == Some(&node_id) {
-            if let Some(creds) = node.get("credentials").cloned() {
-                return Ok(Json(creds));
-            }
+        if node.get("id").and_then(|v| v.as_str()) == Some(&node_id)
+            && let Some(creds) = node.get("credentials").cloned()
+        {
+            return Ok(Json(creds));
         }
     }
 

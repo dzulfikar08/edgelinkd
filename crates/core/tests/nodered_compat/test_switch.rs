@@ -8,7 +8,7 @@ use std::time::Duration;
 use serde_json::json;
 
 use super::flow_builder::{FlowBuilder, switch_rule};
-use super::harness::{TestHarness, assert_msg_has};
+use super::harness::TestHarness;
 
 /// Switch: equality (==) rule with string.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

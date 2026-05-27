@@ -203,7 +203,7 @@ impl ModbusServerNode {
     fn build_request_payload(&self, fc: u8, pdu: &[u8]) -> Option<std::collections::BTreeMap<String, Variant>> {
         let mut m = std::collections::BTreeMap::new();
         match fc {
-            0x01 | 0x02 | 0x03 | 0x04 => {
+            0x01..=0x04 => {
                 if pdu.len() >= 5 {
                     let addr = u16::from_be_bytes([pdu[1], pdu[2]]);
                     let qty = u16::from_be_bytes([pdu[3], pdu[4]]);
@@ -270,7 +270,7 @@ impl ModbusServerNode {
                 if end > c.len() {
                     return Some(Self::exception(fc, 0x02));
                 }
-                let byte_count = (qty + 7) / 8;
+                let byte_count = qty.div_ceil(8);
                 let mut data = vec![0u8; byte_count];
                 for i in 0..qty {
                     if c[addr + i] {
@@ -474,20 +474,19 @@ impl FlowNodeBehavior for ModbusServerNode {
                     if let Ok(msg) = result {
                         let guard = msg.read().await;
                         let topic = guard.get("topic").and_then(|v| v.as_str()).unwrap_or("");
-                        if topic == "write" || topic.is_empty() {
-                            if let Some(payload) = guard.get("payload") {
-                                if let Some(obj) = payload.as_object() {
-                                    let addr_val = obj.get("address").and_then(|v| v.as_f64()).map(|f| f as usize);
-                                    let value = obj.get("value");
-                                    if let (Some(a), Some(v)) = (addr_val, value) {
-                                        if let Some(b) = v.as_bool() {
-                                            let mut c = coils.lock().unwrap();
-                                            if a < c.len() { c[a] = b; }
-                                        } else if let Some(n) = v.as_f64() {
-                                            let mut r = registers.lock().unwrap();
-                                            if a < r.len() { r[a] = n as u16; }
-                                        }
-                                    }
+                        if (topic == "write" || topic.is_empty())
+                            && let Some(payload) = guard.get("payload")
+                            && let Some(obj) = payload.as_object()
+                        {
+                            let addr_val = obj.get("address").and_then(|v| v.as_f64()).map(|f| f as usize);
+                            let value = obj.get("value");
+                            if let (Some(a), Some(v)) = (addr_val, value) {
+                                if let Some(b) = v.as_bool() {
+                                    let mut c = coils.lock().unwrap();
+                                    if a < c.len() { c[a] = b; }
+                                } else if let Some(n) = v.as_f64() {
+                                    let mut r = registers.lock().unwrap();
+                                    if a < r.len() { r[a] = n as u16; }
                                 }
                             }
                         }

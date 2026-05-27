@@ -104,7 +104,7 @@ impl FlowNodeBehavior for ModbusFlexWriterNode {
                         }
                         "writeMultipleCoils" => {
                             let arr = payload
-                                .and_then(|v| v.as_array().map(|a| a.iter().cloned().collect::<Vec<_>>()))
+                                .and_then(|v| v.as_array().map(|a| a.to_vec()))
                                 .ok_or_else(|| anyhow::anyhow!("payload must be array of booleans"))?;
                             let coils: Vec<bool> = arr
                                 .iter()

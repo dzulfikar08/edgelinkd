@@ -64,24 +64,24 @@ impl TimescaleDbQueryNode {
 
     fn bind_params(msg: &Msg) -> Vec<Box<dyn tokio_postgres::types::ToSql + Sync + Send>> {
         let mut params: Vec<Box<dyn tokio_postgres::types::ToSql + Sync + Send>> = Vec::new();
-        if let Some(query_params) = msg.get("queryParams") {
-            if let Some(arr) = query_params.as_array() {
-                for val in arr {
-                    match val {
-                        Variant::String(s) => params.push(Box::new(s.clone())),
-                        Variant::Number(n) => {
-                            if let Some(i) = n.as_i64() {
-                                params.push(Box::new(i));
-                            } else if let Some(f) = n.as_f64() {
-                                params.push(Box::new(f));
-                            }
+        if let Some(query_params) = msg.get("queryParams")
+            && let Some(arr) = query_params.as_array()
+        {
+            for val in arr {
+                match val {
+                    Variant::String(s) => params.push(Box::new(s.clone())),
+                    Variant::Number(n) => {
+                        if let Some(i) = n.as_i64() {
+                            params.push(Box::new(i));
+                        } else if let Some(f) = n.as_f64() {
+                            params.push(Box::new(f));
                         }
-                        Variant::Bool(b) => params.push(Box::new(*b)),
-                        Variant::Null => params.push(Box::new(Option::<String>::None)),
-                        _ => {
-                            if let Ok(s) = val.to_string() {
-                                params.push(Box::new(s));
-                            }
+                    }
+                    Variant::Bool(b) => params.push(Box::new(*b)),
+                    Variant::Null => params.push(Box::new(Option::<String>::None)),
+                    _ => {
+                        if let Ok(s) = val.to_string() {
+                            params.push(Box::new(s));
                         }
                     }
                 }

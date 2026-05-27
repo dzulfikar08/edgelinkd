@@ -1,0 +1,57 @@
+[      83ms] [LOG] JQMIGRATE: Migrate is installed, version 3.3.0 @ http://localhost:1888/vendor/vendor.js:3
+[     412ms] [LOG] Node-RED: 3.1.0 @ http://localhost:1888/red/red.min.js:15
+[     413ms] [LOG] jQuery 3.5.1 @ http://localhost:1888/red/red.min.js:15
+[     413ms] [LOG] jQuery UI 1.13.2 @ http://localhost:1888/red/red.min.js:15
+[     413ms] [LOG] ACE 1.4.12 @ http://localhost:1888/red/red.min.js:15
+[     413ms] [LOG] MONACO 0.49.0 @ http://localhost:1888/red/red.min.js:15
+[     413ms] [LOG] D3 3.0.3 @ http://localhost:1888/red/red.min.js:15
+[     453ms] [LOG] Projects disabled @ http://localhost:1888/red/red.min.js:15
+[22884213ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed:  @ http://localhost:1888/red/red.min.js:15
+[22885218ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[22886222ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[22887225ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[22888230ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[22889235ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[22890244ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[22891248ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[22892261ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[22893292ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[22895365ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[22897417ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[22899513ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[22901726ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[22904042ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[22906916ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[22911167ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[22914230ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[22921200ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[22927237ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23555877ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed:  @ http://localhost:1888/red/red.min.js:15
+[23556886ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23557892ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23558898ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23559901ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23560905ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23561913ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23562927ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23563944ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23680648ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed:  @ http://localhost:1888/red/red.min.js:15
+[23681652ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23682657ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23683660ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23684664ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23685669ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23686673ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23687681ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23688695ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23689713ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23691742ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23693881ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23696032ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23698532ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23701271ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23705475ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23710726ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23715472ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23720768ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15
+[23724993ms] [ERROR] WebSocket connection to 'ws://localhost:1888/comms' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:1888/red/red.min.js:15

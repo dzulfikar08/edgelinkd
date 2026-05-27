@@ -369,11 +369,11 @@ fn build_system_prompt(flow_context: Option<&str>) -> String {
          Reference specific node types by their exact type names.",
     );
 
-    if let Some(ctx) = flow_context {
-        if !ctx.is_empty() {
-            prompt.push_str("\n\n## Current Flow Context\n");
-            prompt.push_str(ctx);
-        }
+    if let Some(ctx) = flow_context
+        && !ctx.is_empty()
+    {
+        prompt.push_str("\n\n## Current Flow Context\n");
+        prompt.push_str(ctx);
     }
 
     prompt

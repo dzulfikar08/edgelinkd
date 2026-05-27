@@ -12,9 +12,7 @@ use rust_red_mqtt_broker::config::BrokerConfig;
 
 /// Helper: start a broker on a random port and return its address.
 async fn start_test_broker() -> (Arc<MqttBroker>, std::net::SocketAddr) {
-    let mut config = BrokerConfig::default();
-    config.bind = "127.0.0.1:0".to_string();
-    config.enabled = true;
+    let config = BrokerConfig { bind: "127.0.0.1:0".to_string(), enabled: true, ..Default::default() };
     let broker = Arc::new(MqttBroker::new(config));
     let addr = broker.clone().start_background().await.expect("broker start");
     // Give the broker a moment to start listening
@@ -548,10 +546,8 @@ async fn authentication_rejects_wrong_credentials() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn large_payload_delivery() {
-    let mut config = BrokerConfig::default();
-    config.bind = "127.0.0.1:0".to_string();
-    config.enabled = true;
-    config.max_packet_size = 200_000;
+    let config =
+        BrokerConfig { bind: "127.0.0.1:0".to_string(), enabled: true, max_packet_size: 200_000, ..Default::default() };
     let broker = Arc::new(MqttBroker::new(config));
     let addr = broker.clone().start_background().await.expect("broker start");
     tokio::time::sleep(Duration::from_millis(50)).await;

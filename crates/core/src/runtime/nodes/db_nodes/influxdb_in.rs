@@ -69,23 +69,23 @@ impl InfluxDbInNode {
         line.push_str(&measurement);
 
         // Tags
-        if let Some(ref tag_cols) = self.config.tag_columns {
-            if !tag_cols.is_empty() {
-                for col in tag_cols {
-                    if let Some(val) = msg.get(col) {
-                        if let Some(s) = val.as_str() {
-                            line.push(',');
-                            line.push_str(&escape_tag_key(col));
-                            line.push('=');
-                            line.push_str(&escape_tag_value(s));
-                        } else {
-                            // For non-string tag values, convert to string
-                            let s = variant_to_string(val);
-                            line.push(',');
-                            line.push_str(&escape_tag_key(col));
-                            line.push('=');
-                            line.push_str(&escape_tag_value(&s));
-                        }
+        if let Some(ref tag_cols) = self.config.tag_columns
+            && !tag_cols.is_empty()
+        {
+            for col in tag_cols {
+                if let Some(val) = msg.get(col) {
+                    if let Some(s) = val.as_str() {
+                        line.push(',');
+                        line.push_str(&escape_tag_key(col));
+                        line.push('=');
+                        line.push_str(&escape_tag_value(s));
+                    } else {
+                        // For non-string tag values, convert to string
+                        let s = variant_to_string(val);
+                        line.push(',');
+                        line.push_str(&escape_tag_key(col));
+                        line.push('=');
+                        line.push_str(&escape_tag_value(&s));
                     }
                 }
             }
@@ -136,15 +136,15 @@ impl InfluxDbInNode {
         }
 
         // Timestamp (optional)
-        if let Some(ref ts_col) = self.config.timestamp_column {
-            if let Some(val) = msg.get(ts_col) {
-                if let Some(ts_str) = val.as_str() {
-                    line.push(' ');
-                    line.push_str(ts_str);
-                } else if let Some(ts_i64) = val.as_i64() {
-                    line.push(' ');
-                    line.push_str(&ts_i64.to_string());
-                }
+        if let Some(ref ts_col) = self.config.timestamp_column
+            && let Some(val) = msg.get(ts_col)
+        {
+            if let Some(ts_str) = val.as_str() {
+                line.push(' ');
+                line.push_str(ts_str);
+            } else if let Some(ts_i64) = val.as_i64() {
+                line.push(' ');
+                line.push_str(&ts_i64.to_string());
             }
         }
 

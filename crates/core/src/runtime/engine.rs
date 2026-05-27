@@ -317,15 +317,16 @@ impl Engine {
             #[cfg(feature = "cluster")]
             {
                 let partitioner_guard = self.inner.cluster_partitioner.read().unwrap();
-                if let Some(ref partitioner) = partitioner_guard.as_ref() {
-                    if partitioner.is_enabled() && !partitioner.owns_flow(&f.key().to_string()) {
-                        log::info!(
-                            "cluster: skipping flow {} (not assigned to node {})",
-                            f.key(),
-                            partitioner.local_node_id()
-                        );
-                        continue;
-                    }
+                if let Some(ref partitioner) = partitioner_guard.as_ref()
+                    && partitioner.is_enabled()
+                    && !partitioner.owns_flow(&f.key().to_string())
+                {
+                    log::info!(
+                        "cluster: skipping flow {} (not assigned to node {})",
+                        f.key(),
+                        partitioner.local_node_id()
+                    );
+                    continue;
                 }
             }
             f.value().start().await?;

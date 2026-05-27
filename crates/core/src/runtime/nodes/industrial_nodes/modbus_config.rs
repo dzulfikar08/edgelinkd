@@ -59,10 +59,11 @@ fn default_timeout_ms() -> u64 {
 /// Industrial PLCs store values in 16-bit registers. Multi-byte and
 /// floating-point values span two or more consecutive registers. This
 /// enum describes how to interpret a sequence of raw u16 words.
-#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum ModbusDataType {
     /// Raw unsigned 16-bit word (default).
+    #[default]
     UInt16,
     /// Signed 16-bit integer (two's complement).
     Int16,
@@ -78,12 +79,6 @@ pub(crate) enum ModbusDataType {
     Int64,
     /// IEEE-754 double-precision float stored in four registers.
     Double,
-}
-
-impl Default for ModbusDataType {
-    fn default() -> Self {
-        Self::UInt16
-    }
 }
 
 impl ModbusDataType {
@@ -136,7 +131,7 @@ impl ModbusDataType {
                 }
                 let bits = ((words[0] as u32) << 16) | (words[1] as u32);
                 let val = f32::from_bits(bits);
-                Ok(Variant::from(serde_json::Number::from_f64(val as f64).map_or(Variant::Null, Variant::Number)))
+                Ok(serde_json::Number::from_f64(val as f64).map_or(Variant::Null, Variant::Number))
             }
             Self::UInt64 => {
                 if words.len() < 4 {
@@ -173,7 +168,7 @@ impl ModbusDataType {
                     | ((words[2] as u64) << 16)
                     | (words[3] as u64);
                 let val = f64::from_bits(bits);
-                Ok(Variant::from(serde_json::Number::from_f64(val).map_or(Variant::Null, Variant::Number)))
+                Ok(serde_json::Number::from_f64(val).map_or(Variant::Null, Variant::Number))
             }
         }
     }
@@ -211,7 +206,7 @@ impl ModbusDataType {
     /// data-type unit. For example, with `Float` and 6 registers, returns 3 values.
     pub(crate) fn convert_batch(&self, words: &[u16]) -> crate::Result<Vec<Variant>> {
         let stride = self.register_count() as usize;
-        if words.len() % stride != 0 {
+        if !words.len().is_multiple_of(stride) {
             return Err(anyhow::anyhow!(
                 "Register count {} is not a multiple of data-type width {}",
                 words.len(),

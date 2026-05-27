@@ -7,7 +7,6 @@ use std::time::Duration;
 
 use serde_json::json;
 
-use super::flow_builder::FlowBuilder;
 use super::harness::{TestHarness, assert_msg_str};
 
 /// Delay: fixed delay of milliseconds.

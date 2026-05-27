@@ -313,7 +313,7 @@ where
     match node.recv_msg(cancel.clone()).await {
         Ok(msg) => {
             let node_type = node.type_str().to_string();
-            let _node_id = node.id().to_string();
+            let node_id = node.id().to_string();
 
             // Telemetry: record message counter and measure processing duration
             super::telemetry::record_message(&node_type);
@@ -325,7 +325,7 @@ where
             #[cfg(feature = "otel")]
             let mut _otel_span = {
                 use opentelemetry::KeyValue;
-                use opentelemetry::trace::{Span, SpanKind, Tracer};
+                use opentelemetry::trace::{SpanKind, Tracer};
                 let tracer = opentelemetry::global::tracer("rust-red");
                 tracer
                     .span_builder("node_process")
@@ -517,11 +517,16 @@ impl<'de> Deserialize<'de> for FlowNodeScope {
                 }
             }
 
-            fn visit_seq<A>(self, seq: A) -> Result<FlowNodeScope, A::Error>
+            fn visit_seq<A>(self, mut seq: A) -> Result<FlowNodeScope, A::Error>
             where
                 A: serde::de::SeqAccess<'de>,
             {
-                let vec: Vec<ElementId> = Deserialize::deserialize(serde::de::value::SeqAccessDeserializer::new(seq))?;
+                let mut vec = Vec::new();
+                while let Some(item) = seq.next_element::<String>()? {
+                    let eid = crate::runtime::model::json::deser::parse_red_id_str(&item)
+                        .ok_or_else(|| serde::de::Error::custom(format!("failed to parse ElementId: {item}")))?;
+                    vec.push(eid);
+                }
                 Ok(FlowNodeScope::Nodes(vec))
             }
         }

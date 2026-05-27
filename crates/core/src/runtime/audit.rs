@@ -160,10 +160,10 @@ impl FileAuditLogger {
         line.push('\n');
 
         // Ensure parent directory exists
-        if let Some(parent) = Path::new(&self.config.path).parent() {
-            if !parent.as_os_str().is_empty() {
-                tokio::fs::create_dir_all(parent).await?;
-            }
+        if let Some(parent) = Path::new(&self.config.path).parent()
+            && !parent.as_os_str().is_empty()
+        {
+            tokio::fs::create_dir_all(parent).await?;
         }
 
         // Use OpenOptions for append, creating the file if missing

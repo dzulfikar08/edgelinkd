@@ -74,10 +74,10 @@ impl ContextStore for MemoryContextStore {
 
     async fn get_all(&self, scope: &str) -> Result<std::collections::HashMap<String, Variant>> {
         let scopes = self.scopes.read().await;
-        if let Some(scope_map) = scopes.get(scope) {
-            if let Some(obj) = scope_map.as_object() {
-                return Ok(obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
-            }
+        if let Some(scope_map) = scopes.get(scope)
+            && let Some(obj) = scope_map.as_object()
+        {
+            return Ok(obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
         }
         Ok(std::collections::HashMap::new())
     }

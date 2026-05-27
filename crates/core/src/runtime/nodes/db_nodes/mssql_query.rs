@@ -116,29 +116,29 @@ impl MssqlQueryNode {
     fn build_query(&self, msg: &Msg) -> tiberius::Query<'_> {
         let mut query = tiberius::Query::new(&self.config.query);
 
-        if let Some(query_params) = msg.get("queryParams") {
-            if let Some(arr) = query_params.as_array() {
-                for val in arr {
-                    match val {
-                        Variant::String(s) => query.bind(s.clone()),
-                        Variant::Number(n) => {
-                            if let Some(i) = n.as_i64() {
-                                query.bind(i)
-                            } else if let Some(f) = n.as_f64() {
-                                query.bind(f)
-                            } else {
-                                query.bind(val.to_string().unwrap_or_default())
-                            }
+        if let Some(query_params) = msg.get("queryParams")
+            && let Some(arr) = query_params.as_array()
+        {
+            for val in arr {
+                match val {
+                    Variant::String(s) => query.bind(s.clone()),
+                    Variant::Number(n) => {
+                        if let Some(i) = n.as_i64() {
+                            query.bind(i)
+                        } else if let Some(f) = n.as_f64() {
+                            query.bind(f)
+                        } else {
+                            query.bind(val.to_string().unwrap_or_default())
                         }
-                        Variant::Bool(b) => query.bind(*b),
-                        Variant::Null => query.bind(Option::<String>::None),
-                        _ => {
-                            if let Ok(s) = val.to_string() {
-                                query.bind(s)
-                            }
+                    }
+                    Variant::Bool(b) => query.bind(*b),
+                    Variant::Null => query.bind(Option::<String>::None),
+                    _ => {
+                        if let Ok(s) = val.to_string() {
+                            query.bind(s)
                         }
-                    };
-                }
+                    }
+                };
             }
         }
 
@@ -203,7 +203,7 @@ impl FlowNodeBehavior for MssqlQueryNode {
                     };
 
                     let msg_read = msg.read().await;
-                    let query = node.build_query(&*msg_read);
+                    let query = node.build_query(&msg_read);
                     drop(msg_read);
 
                     let timeout = Duration::from_millis(node.config.timeout_ms);

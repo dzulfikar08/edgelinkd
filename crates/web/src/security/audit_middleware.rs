@@ -8,22 +8,21 @@ use axum::response::Response;
 use rust_red_core::runtime::audit::{AuditEventType, AuditLogger};
 
 fn extract_ip(headers: &HeaderMap) -> Option<String> {
-    if let Some(xff) = headers.get("x-forwarded-for") {
-        if let Ok(val) = xff.to_str() {
-            if let Some(ip) = val.split(',').next() {
-                let ip = ip.trim();
-                if !ip.is_empty() {
-                    return Some(ip.to_string());
-                }
-            }
+    if let Some(xff) = headers.get("x-forwarded-for")
+        && let Ok(val) = xff.to_str()
+        && let Some(ip) = val.split(',').next()
+    {
+        let ip = ip.trim();
+        if !ip.is_empty() {
+            return Some(ip.to_string());
         }
     }
-    if let Some(xri) = headers.get("x-real-ip") {
-        if let Ok(val) = xri.to_str() {
-            let ip = val.trim();
-            if !ip.is_empty() {
-                return Some(ip.to_string());
-            }
+    if let Some(xri) = headers.get("x-real-ip")
+        && let Ok(val) = xri.to_str()
+    {
+        let ip = val.trim();
+        if !ip.is_empty() {
+            return Some(ip.to_string());
         }
     }
     None

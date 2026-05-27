@@ -6,7 +6,7 @@
 use serde_json::json;
 
 use super::flow_builder::FlowBuilder;
-use super::harness::{TestHarness, assert_msg_bool, assert_msg_eq, assert_msg_has, assert_msg_num, assert_msg_str};
+use super::harness::{TestHarness, assert_msg_bool, assert_msg_has, assert_msg_num, assert_msg_str};
 use rust_red_core::runtime::model::Variant;
 
 /// Inject with string payload.

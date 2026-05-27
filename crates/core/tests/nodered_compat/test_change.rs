@@ -6,7 +6,7 @@
 use serde_json::json;
 
 use super::flow_builder::{FlowBuilder, change_rule};
-use super::harness::{TestHarness, assert_msg_eq, assert_msg_not_has, assert_msg_str};
+use super::harness::{TestHarness, assert_msg_not_has, assert_msg_str};
 use rust_red_core::runtime::model::Variant;
 
 /// Change: set property to a string value.

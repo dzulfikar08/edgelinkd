@@ -36,8 +36,7 @@ impl SharedState {
         if let Some(parent) = path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
-        let json_bytes =
-            serde_json::to_string_pretty(data).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        let json_bytes = serde_json::to_string_pretty(data).map_err(std::io::Error::other)?;
         let tmp_path = path.with_extension("json.tmp");
         tokio::fs::write(&tmp_path, &json_bytes).await?;
         tokio::fs::rename(&tmp_path, &path).await?;
@@ -130,11 +129,11 @@ impl ContextStore for FileContextStore {
                 }
                 let scopes = state.scopes.read().await;
                 for scope in &dirty_scopes {
-                    if let Some(data) = scopes.get(scope) {
-                        if let Err(e) = state.flush_scope(scope, data).await {
-                            log::error!("[LOCALFS] Failed to flush scope '{}': {}", scope, e);
-                            state.dirty.write().await.insert(scope.clone());
-                        }
+                    if let Some(data) = scopes.get(scope)
+                        && let Err(e) = state.flush_scope(scope, data).await
+                    {
+                        log::error!("[LOCALFS] Failed to flush scope '{}': {}", scope, e);
+                        state.dirty.write().await.insert(scope.clone());
                     }
                 }
             }
@@ -205,10 +204,10 @@ impl ContextStore for FileContextStore {
     async fn get_all(&self, scope: &str) -> Result<std::collections::HashMap<String, Variant>> {
         self.ensure_scope_loaded(scope).await;
         let scopes = self.state.scopes.read().await;
-        if let Some(scope_map) = scopes.get(scope) {
-            if let Some(obj) = scope_map.as_object() {
-                return Ok(obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
-            }
+        if let Some(scope_map) = scopes.get(scope)
+            && let Some(obj) = scope_map.as_object()
+        {
+            return Ok(obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
         }
         Ok(std::collections::HashMap::new())
     }

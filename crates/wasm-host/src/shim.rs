@@ -13,17 +13,22 @@ use tokio_util::sync::CancellationToken;
 use crate::state::WasmNodeState;
 use crate::types::{ProcessResult, WasmMessage, WasmValue};
 
+/// WASM guest function handles resolved from the module exports.
+pub struct WasmGuestFunctions {
+    pub process_fn: wasmtime::TypedFunc<(u32, u32), u32>,
+    pub on_start_fn: wasmtime::TypedFunc<(u32, u32), u32>,
+    pub on_stop_fn: wasmtime::TypedFunc<(), u32>,
+    pub alloc_fn: wasmtime::TypedFunc<u32, u32>,
+    pub result_len_fn: Option<wasmtime::TypedFunc<(), u32>>,
+}
+
 /// The shim struct that implements `FlowNodeBehavior` and delegates to the WASM guest.
 pub struct WasmNodeShim {
     pub base: BaseFlowNodeState,
     pub instance: wasmtime::Instance,
     pub store: std::sync::Mutex<wasmtime::Store<WasmNodeState>>,
     pub memory: wasmtime::Memory,
-    pub process_fn: wasmtime::TypedFunc<(u32, u32), u32>,
-    pub on_start_fn: wasmtime::TypedFunc<(u32, u32), u32>,
-    pub on_stop_fn: wasmtime::TypedFunc<(), u32>,
-    pub alloc_fn: wasmtime::TypedFunc<u32, u32>,
-    pub result_len_fn: Option<wasmtime::TypedFunc<(), u32>>,
+    fns: WasmGuestFunctions,
 }
 
 impl WasmNodeShim {
@@ -32,23 +37,9 @@ impl WasmNodeShim {
         instance: wasmtime::Instance,
         store: wasmtime::Store<WasmNodeState>,
         memory: wasmtime::Memory,
-        process_fn: wasmtime::TypedFunc<(u32, u32), u32>,
-        on_start_fn: wasmtime::TypedFunc<(u32, u32), u32>,
-        on_stop_fn: wasmtime::TypedFunc<(), u32>,
-        alloc_fn: wasmtime::TypedFunc<u32, u32>,
-        result_len_fn: Option<wasmtime::TypedFunc<(), u32>>,
+        fns: WasmGuestFunctions,
     ) -> Self {
-        Self {
-            base,
-            instance,
-            store: std::sync::Mutex::new(store),
-            memory,
-            process_fn,
-            on_start_fn,
-            on_stop_fn,
-            alloc_fn,
-            result_len_fn,
-        }
+        Self { base, instance, store: std::sync::Mutex::new(store), memory, fns }
     }
 
     fn call_guest_on_start(&self) {
@@ -60,7 +51,7 @@ impl WasmNodeShim {
         let config_bytes = postcard::to_allocvec(&empty_config).unwrap_or_default();
 
         let len = config_bytes.len() as u32;
-        let ptr = self.alloc_fn.call(&mut *store_guard, len).unwrap_or(0);
+        let ptr = self.fns.alloc_fn.call(&mut *store_guard, len).unwrap_or(0);
 
         if ptr == 0 {
             log::error!("WasmNodeShim: guest alloc returned null for on_start config");
@@ -69,7 +60,7 @@ impl WasmNodeShim {
 
         self.memory.data_mut(&mut *store_guard)[ptr as usize..][..len as usize].copy_from_slice(&config_bytes);
 
-        match self.on_start_fn.call(&mut *store_guard, (ptr, len)) {
+        match self.fns.on_start_fn.call(&mut *store_guard, (ptr, len)) {
             Ok(0) => log::debug!("WasmNodeShim: guest on_start returned success"),
             Ok(code) => log::warn!("WasmNodeShim: guest on_start returned code {code}"),
             Err(e) => log::error!("WasmNodeShim: guest on_start failed: {e}"),
@@ -79,7 +70,7 @@ impl WasmNodeShim {
     fn call_guest_on_stop(&self) {
         let mut store_guard = self.store.lock().unwrap();
         store_guard.set_epoch_deadline(1_000_000);
-        match self.on_stop_fn.call(&mut *store_guard, ()) {
+        match self.fns.on_stop_fn.call(&mut *store_guard, ()) {
             Ok(0) => log::debug!("WasmNodeShim: guest on_stop returned success"),
             Ok(code) => log::warn!("WasmNodeShim: guest on_stop returned code {code}"),
             Err(e) => log::error!("WasmNodeShim: guest on_stop failed: {e}"),
@@ -99,6 +90,7 @@ impl WasmNodeShim {
 
         let len = msg_bytes.len() as u32;
         let guest_ptr = self
+            .fns
             .alloc_fn
             .call(&mut *store_guard, len)
             .map_err(|e| rust_red_core::RustRedError::InvalidOperation(format!("guest alloc failed: {e}")))?;
@@ -106,6 +98,7 @@ impl WasmNodeShim {
         self.memory.data_mut(&mut *store_guard)[guest_ptr as usize..][..len as usize].copy_from_slice(&msg_bytes);
 
         let result_ptr = self
+            .fns
             .process_fn
             .call(&mut *store_guard, (guest_ptr, len))
             .map_err(|e| rust_red_core::RustRedError::InvalidOperation(format!("guest process_msg failed: {e}")))?;
@@ -113,7 +106,7 @@ impl WasmNodeShim {
         let result = if result_ptr == 0 {
             ProcessResult { output: None }
         } else {
-            let result_len = if let Some(ref len_fn) = self.result_len_fn {
+            let result_len = if let Some(ref len_fn) = self.fns.result_len_fn {
                 len_fn.call(&mut *store_guard, ()).unwrap_or(0)
             } else {
                 4096

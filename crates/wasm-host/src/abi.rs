@@ -138,15 +138,14 @@ fn host_alloc_fn(mut caller: wasmtime::Caller<'_, WasmNodeState>, size: u32) -> 
     // If we need more memory, grow
     let needed = size as usize;
     if current_size < needed {
-        let extra_pages = (needed - current_size + WASM_PAGE_SIZE - 1) / WASM_PAGE_SIZE;
+        let extra_pages = (needed - current_size).div_ceil(WASM_PAGE_SIZE);
         if memory.grow(&mut caller, extra_pages as u64).is_err() {
             return 0;
         }
     }
 
     // Return offset at the end of old memory area
-    let ptr = current_size as u32;
-    ptr
+    current_size as u32
 }
 
 /// `host_report_error(msg_ptr: u32, msg_len: u32)`

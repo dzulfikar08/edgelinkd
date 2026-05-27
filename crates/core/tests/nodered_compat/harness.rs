@@ -6,7 +6,8 @@
 use std::time::Duration;
 
 use rust_red_core::runtime::engine::Engine;
-use rust_red_core::runtime::model::{ElementId, Msg, MsgHandle, Variant};
+use rust_red_core::runtime::model::json::deser::parse_red_id_str;
+use rust_red_core::runtime::model::{ElementId, Msg, Variant};
 use serde::Deserialize;
 use serde_json::json;
 
@@ -14,6 +15,7 @@ use serde_json::json;
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_millis(500);
 
 /// Node IDs used as conventions in test flows.
+#[allow(dead_code)]
 pub mod node_ids {
     /// The tab/flow node ID.
     pub const TAB: &str = "100";
@@ -57,6 +59,7 @@ impl TestHarness {
     }
 
     /// Build a test engine from a JSON string.
+    #[allow(dead_code)]
     pub fn from_flow_json_str(json_str: &str) -> Self {
         let json: serde_json::Value = serde_json::from_str(json_str).expect("Invalid JSON string");
         Self::from_flow_json(json)
@@ -88,7 +91,7 @@ impl TestHarness {
         let inject_data: Vec<(ElementId, Msg)> = msgs_to_inject
             .into_iter()
             .map(|(id, val)| {
-                let eid: ElementId = id.parse().expect("Invalid node ID");
+                let eid: ElementId = parse_red_id_str(&id).expect("Invalid node ID");
                 let msg: Msg = Msg::deserialize(val).expect("Failed to deserialize msg");
                 (eid, msg)
             })
@@ -117,7 +120,7 @@ impl TestHarness {
     }
 
     fn build_inject_list(&self, node_id: &str, msg_json: serde_json::Value) -> Vec<(ElementId, Msg)> {
-        let eid: ElementId = node_id.parse().expect("Invalid node ID");
+        let eid: ElementId = parse_red_id_str(node_id).expect("Invalid node ID");
         let msg: Msg = Msg::deserialize(msg_json).expect("Failed to deserialize msg");
         vec![(eid, msg)]
     }
@@ -142,6 +145,7 @@ impl TestHarness {
 
 /// Assert that a message property equals an expected Variant value.
 #[track_caller]
+#[allow(dead_code)]
 pub fn assert_msg_eq(msg: &Msg, key: &str, expected: &Variant) {
     let actual = msg.get(key).unwrap_or_else(|| panic!("Message missing property '{key}'"));
     assert_eq!(actual, expected, "Message property '{key}': expected {:?}, got {:?}", expected, actual);

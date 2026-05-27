@@ -14,6 +14,7 @@ struct TrieNode {
     multi_subscriptions: Vec<Subscription>,
 }
 
+#[derive(Default)]
 pub struct TopicTrie {
     root: TrieNode,
     /// Subscriptions containing + single-level wildcards, matched linearly.
@@ -22,7 +23,7 @@ pub struct TopicTrie {
 
 impl TopicTrie {
     pub fn new() -> Self {
-        Self { root: TrieNode::default(), wildcard_subscriptions: Vec::new() }
+        Self::default()
     }
 
     pub fn subscribe(&mut self, client_id: String, topic_filter: String, qos: crate::protocol::packets::QoS) {

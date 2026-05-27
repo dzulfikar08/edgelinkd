@@ -105,8 +105,8 @@ impl SqliteConfigNode {
         let rows = stmt
             .query_map(params, |row| {
                 let mut map = VariantObjectMap::new();
-                for i in 0..column_count {
-                    let key = column_names[i].clone();
+                for (i, col_name) in column_names.iter().enumerate() {
+                    let key = col_name.clone();
                     let val = super::row_to_variant(row, i);
                     map.set_property(key, val);
                 }

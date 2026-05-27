@@ -76,7 +76,7 @@ impl AiConfig {
 }
 
 /// Per-provider configuration block.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AiProvidersConfig {
     #[serde(default)]
     pub openai_compatible: OpenAiCompatibleConfig,
@@ -84,16 +84,6 @@ pub struct AiProvidersConfig {
     pub anthropic: AnthropicConfig,
     #[serde(default)]
     pub local_wasm: LocalWasmConfig,
-}
-
-impl Default for AiProvidersConfig {
-    fn default() -> Self {
-        Self {
-            openai_compatible: OpenAiCompatibleConfig::default(),
-            anthropic: AnthropicConfig::default(),
-            local_wasm: LocalWasmConfig::default(),
-        }
-    }
 }
 
 /// OpenAI-compatible provider configuration (Ollama, LM Studio, etc.).
@@ -182,7 +172,7 @@ impl AnthropicConfig {
 }
 
 /// Local WASM provider configuration (placeholder for future WASM-based inference).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct LocalWasmConfig {
     /// Whether the local WASM provider is enabled.
     #[serde(default)]
@@ -191,12 +181,6 @@ pub struct LocalWasmConfig {
     /// Path to the WASM model file.
     #[serde(default)]
     pub model_path: String,
-}
-
-impl Default for LocalWasmConfig {
-    fn default() -> Self {
-        Self { enabled: false, model_path: String::new() }
-    }
 }
 
 impl LocalWasmConfig {

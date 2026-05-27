@@ -146,7 +146,7 @@ impl GossipEngine {
             match result {
                 Ok(addr) => {
                     // Don't dial ourselves.
-                    if addr == self.config.bind_addr().unwrap_or_else(|_| addr) {
+                    if addr == self.config.bind_addr().unwrap_or(addr) {
                         continue;
                     }
                     if let Err(e) = self.send_heartbeat_to(addr).await {
@@ -387,10 +387,10 @@ impl GossipEngine {
                         } else {
                             // Listener not ready yet; wait a bit.
                             tokio::time::sleep(Duration::from_millis(100)).await;
-                            return Err(std::io::Error::new(
+                            Err(std::io::Error::new(
                                 std::io::ErrorKind::NotConnected,
                                 "listener not bound",
-                            ));
+                            ))
                         }
                     } => {
                         match accept {
@@ -519,10 +519,10 @@ impl GossipEngine {
             if entry.node_id == self.local_id {
                 continue;
             }
-            if entry.is_alive() {
-                if let Err(e) = send_tcp_raw(entry.addr, &data).await {
-                    log::debug!("cluster: leave notification to {} failed: {}", entry.addr, e);
-                }
+            if entry.is_alive()
+                && let Err(e) = send_tcp_raw(entry.addr, &data).await
+            {
+                log::debug!("cluster: leave notification to {} failed: {}", entry.addr, e);
             }
         }
         log::info!("cluster: node {} left the cluster", self.local_id);

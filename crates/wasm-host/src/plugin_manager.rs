@@ -171,7 +171,7 @@ impl PluginManager {
             }
         }
 
-        if !exports.iter().any(|e| *e == "memory") {
+        if !exports.contains(&"memory") {
             anyhow::bail!("WASM module missing required export: memory");
         }
 
@@ -367,8 +367,13 @@ fn wasm_node_factory(
 
     let result_len_fn = instance.get_typed_func::<(), u32>(&mut store, "rust_red_result_len").ok();
 
-    let shim =
-        WasmNodeShim::new(base, instance, store, memory, process_fn, on_start_fn, on_stop_fn, alloc_fn, result_len_fn);
+    let shim = WasmNodeShim::new(
+        base,
+        instance,
+        store,
+        memory,
+        crate::shim::WasmGuestFunctions { process_fn, on_start_fn, on_stop_fn, alloc_fn, result_len_fn },
+    );
 
     log::info!("Created WasmNodeShim for '{}'", node_type);
 

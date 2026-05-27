@@ -36,6 +36,16 @@ impl RetainedStore {
     pub fn len(&self) -> usize {
         self.messages.len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.messages.is_empty()
+    }
+}
+
+impl Default for RetainedStore {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 pub fn topic_matches_filter(filter: &str, topic: &str) -> bool {

@@ -65,24 +65,24 @@ impl PostgresQueryNode {
 
     fn bind_params(msg: &Msg) -> Vec<Box<dyn tokio_postgres::types::ToSql + Sync + Send>> {
         let mut params: Vec<Box<dyn tokio_postgres::types::ToSql + Sync + Send>> = Vec::new();
-        if let Some(query_params) = msg.get("queryParams") {
-            if let Some(arr) = query_params.as_array() {
-                for val in arr {
-                    match val {
-                        Variant::String(s) => params.push(Box::new(s.clone())),
-                        Variant::Number(n) => {
-                            // Always send as f64 (FLOAT8) to avoid type mismatches.
-                            // PostgreSQL will cast to the column type automatically.
-                            if let Some(f) = n.as_f64() {
-                                params.push(Box::new(f));
-                            }
+        if let Some(query_params) = msg.get("queryParams")
+            && let Some(arr) = query_params.as_array()
+        {
+            for val in arr {
+                match val {
+                    Variant::String(s) => params.push(Box::new(s.clone())),
+                    Variant::Number(n) => {
+                        // Always send as f64 (FLOAT8) to avoid type mismatches.
+                        // PostgreSQL will cast to the column type automatically.
+                        if let Some(f) = n.as_f64() {
+                            params.push(Box::new(f));
                         }
-                        Variant::Bool(b) => params.push(Box::new(*b)),
-                        Variant::Null => params.push(Box::new(Option::<String>::None)),
-                        _ => {
-                            if let Ok(s) = val.to_string() {
-                                params.push(Box::new(s));
-                            }
+                    }
+                    Variant::Bool(b) => params.push(Box::new(*b)),
+                    Variant::Null => params.push(Box::new(Option::<String>::None)),
+                    _ => {
+                        if let Ok(s) = val.to_string() {
+                            params.push(Box::new(s));
                         }
                     }
                 }

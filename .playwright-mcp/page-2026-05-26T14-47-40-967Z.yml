@@ -1,0 +1,358 @@
+- generic:
+  - generic [ref=e1]:
+    - generic [ref=e2]:
+      - generic [ref=e3]:
+        - img [ref=e4]
+        - text: Rust-Red
+      - list [ref=e5]:
+        - listitem [ref=e6]:
+          - link "Deploy" [ref=e8]:
+            - /url: "#"
+            - generic [ref=e9]: Deploy
+        - text: 
+        - listitem [ref=e13]:
+          - link "" [ref=e14] [cursor=pointer]:
+            - /url: "#"
+            - generic [ref=e15]: 
+          - text:    
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - list [ref=e20]:
+            - listitem [ref=e21]:
+              - link "Modbus → PostgreSQL POC" [ref=e22] [cursor=pointer]:
+                - /url: "#a1b2c3d4e5f60001"
+                - text:   Modbus → PostgreSQL POC
+              - generic: 
+          - link "" [ref=e24] [cursor=pointer]:
+            - /url: "#"
+            - generic [ref=e25]: 
+          - link "" [ref=e27] [cursor=pointer]:
+            - /url: "#"
+            - generic [ref=e28]: 
+          - generic [ref=e29]: 
+          - generic [ref=e30]: 
+        - img [ref=e32]:
+          - generic [ref=e40]:
+            - generic [ref=e41]:
+              - generic:
+                - generic: Read Modbus
+              - generic [ref=e46]: 0 @ readHoldingRegisters
+            - generic [ref=e51]:
+              - generic:
+                - generic: Transform to SQL
+            - generic [ref=e57]:
+              - generic:
+                - generic: Insert to PostgreSQL
+              - generic [ref=e62]: 0 rows
+            - generic [ref=e67]:
+              - generic:
+                - generic: Debug Output ⇲
+            - generic [ref=e74]:
+              - generic:
+                - generic: Modbus Server
+            - generic [ref=e80]:
+              - generic:
+                - generic: debug 1
+            - generic [ref=e87]:
+              - generic:
+                - generic: Write Modbus
+            - generic [ref=e93]:
+              - generic:
+                - generic: debug 2
+            - generic [ref=e107]:
+              - generic:
+                - generic: Random Values
+        - generic [ref=e113]:
+          - generic [ref=e115]:
+            - button "" [ref=e117] [cursor=pointer]:
+              - generic [ref=e118]: 
+            - text:   
+          - generic [ref=e119]:
+            - button "" [ref=e121] [cursor=pointer]:
+              - generic [ref=e122]: 
+            - generic [ref=e124]:
+              - button "" [ref=e125] [cursor=pointer]:
+                - generic [ref=e126]: 
+              - button "" [ref=e127] [cursor=pointer]:
+                - generic [ref=e128]: 
+              - button "" [ref=e129] [cursor=pointer]:
+                - generic [ref=e130]: 
+      - generic [ref=e719]:
+        - generic [ref=e720]:
+          - list [ref=e722]:
+            - listitem [ref=e723]: Edit read node
+          - generic [ref=e724]:
+            - button "Delete" [ref=e725] [cursor=pointer]
+            - button "Cancel" [ref=e726] [cursor=pointer]
+            - button "Done" [ref=e727] [cursor=pointer]
+        - generic [ref=e729]:
+          - generic [ref=e730]:
+            - list [ref=e732]:
+              - listitem [ref=e733]:
+                - link " Properties" [ref=e734] [cursor=pointer]:
+                  - /url: "#editor-tab-properties"
+                  - generic [ref=e735]: 
+                  - text: Properties
+              - text:  
+            - generic [ref=e736]:
+              - link "" [ref=e737]:
+                - /url: "#editor-tab-properties"
+                - generic [ref=e738]: 
+              - link "" [ref=e739] [cursor=pointer]:
+                - /url: "#editor-tab-description"
+                - generic [ref=e740]: 
+              - link "" [ref=e741] [cursor=pointer]:
+                - /url: "#editor-tab-appearance"
+                - generic [ref=e742]: 
+          - generic [ref=e743]:
+            - generic [ref=e745]:
+              - textbox [ref=e747]
+              - textbox [ref=e749]
+              - textbox [ref=e751]
+              - generic [ref=e752]:
+                - generic [ref=e753] [cursor=pointer]:
+                  - generic [ref=e754]: 
+                  - text: Name
+                - textbox " Name" [ref=e755]:
+                  - /placeholder: ""
+                  - text: Read Modbus
+              - generic [ref=e756]:
+                - generic [ref=e757] [cursor=pointer]:
+                  - generic [ref=e758]: 
+                  - text: Server
+                - generic [ref=e759]:
+                  - combobox " Server" [ref=e760] [cursor=pointer]:
+                    - option "Local Modbus" [selected]
+                    - option "none"
+                  - generic [ref=e762] [cursor=pointer]: 
+                  - generic [ref=e764] [cursor=pointer]: 
+              - generic [ref=e765]:
+                - list [ref=e766]:
+                  - listitem [ref=e767] [cursor=pointer]:
+                    - link "Settings" [ref=e768]:
+                      - /url: "#"
+                  - listitem [ref=e769] [cursor=pointer]:
+                    - link "Options" [active] [ref=e770]:
+                      - /url: "#"
+                - generic [ref=e771]:
+                  - text:   
+                  - generic [ref=e797]:
+                    - generic [ref=e798] [cursor=pointer]:
+                      - generic [ref=e799]: 
+                      - text: Data Type
+                    - combobox " Data Type" [ref=e800] [cursor=pointer]:
+                      - option "UInt16" [selected]
+                      - option "Int16"
+                      - option "UInt32"
+                      - option "Int32"
+                      - option "Float"
+                      - option "Double"
+                      - option "UInt64"
+                      - option "Int64"
+            - text:              
+        - generic [ref=e790]:
+          - button "" [ref=e791] [cursor=pointer]:
+            - generic [ref=e792]: 
+          - button " Enabled" [ref=e793] [cursor=pointer]:
+            - generic [ref=e794]: 
+            - text: Enabled
+      - generic [ref=e131]:
+        - generic [ref=e133]:
+          - generic: 
+          - textbox "filter nodes" [ref=e135]
+          - text: 
+        - generic [ref=e136]:
+          - text: 
+          - generic [ref=e137]:
+            - generic [ref=e138] [cursor=pointer]:
+              - generic [ref=e139]: 
+              - text: common
+            - generic [ref=e141]:
+              - generic [ref=e143]: complete
+              - generic [ref=e148]: debug
+              - generic [ref=e153]: catch
+              - generic [ref=e158]: comment
+              - generic [ref=e162]: inject
+              - generic [ref=e167]: status
+              - generic [ref=e172]: link in
+              - generic [ref=e177]: link call
+              - generic [ref=e183]: link out
+          - generic [ref=e187]:
+            - generic [ref=e188] [cursor=pointer]:
+              - generic [ref=e189]: 
+              - text: function
+            - generic [ref=e191]:
+              - generic [ref=e193]: change
+              - generic [ref=e199]: delay
+              - generic [ref=e205]: function
+              - generic [ref=e211]: exec
+              - generic [ref=e217]: template
+              - generic [ref=e223]: filter
+              - generic [ref=e229]: range
+              - generic [ref=e235]: trigger
+              - generic [ref=e241]: switch
+              - generic [ref=e247]:
+                - text: ui_dashboard
+                - text: _data
+              - generic [ref=e253]:
+                - text: console -
+                - text: json
+          - generic [ref=e258]:
+            - generic [ref=e259] [cursor=pointer]:
+              - generic [ref=e260]: 
+              - text: network
+            - generic [ref=e262]:
+              - generic [ref=e264]: http in
+              - generic [ref=e269]: http response
+              - generic [ref=e274]: http request
+              - generic [ref=e280]: udp in
+              - generic [ref=e285]: udp out
+              - generic [ref=e290]: mqtt in
+              - generic [ref=e295]: mqtt out
+              - generic [ref=e300]: websocket in
+              - generic [ref=e305]:
+                - text: websocket
+                - text: out
+              - generic [ref=e310]: tcp in
+              - generic [ref=e315]: tcp out
+              - generic [ref=e320]: tcp request
+              - generic [ref=e326]: MQTT Broker
+          - text:  
+          - generic [ref=e331]:
+            - generic [ref=e332] [cursor=pointer]:
+              - generic [ref=e333]: 
+              - text: sequence
+            - generic [ref=e335]:
+              - generic [ref=e337]: batch
+              - generic [ref=e343]: sort
+              - generic [ref=e349]: split
+              - generic [ref=e355]: join
+          - generic [ref=e360]:
+            - generic [ref=e361] [cursor=pointer]:
+              - generic [ref=e362]: 
+              - text: parser
+            - generic [ref=e364]:
+              - generic [ref=e366]: yaml
+              - generic [ref=e372]: json
+              - generic [ref=e378]: html
+              - generic [ref=e384]: csv
+              - generic [ref=e390]: xml
+          - generic [ref=e395]:
+            - generic [ref=e396] [cursor=pointer]:
+              - generic [ref=e397]: 
+              - text: storage
+            - generic [ref=e399]:
+              - generic [ref=e401]: write file
+              - generic [ref=e407]: read file
+              - generic [ref=e413]: watch
+              - generic [ref=e418]:
+                - text: timescaledb -
+                - text: query
+              - generic [ref=e424]: mssql - query
+              - generic [ref=e430]: influxdb - in
+              - generic [ref=e436]: bacnet read
+              - generic [ref=e442]: bacnet write
+              - generic [ref=e448]: sqlite - query
+              - generic [ref=e454]: influxdb - out
+              - generic [ref=e460]:
+                - text: postgres -
+                - text: query
+          - text:   
+          - generic [ref=e465]:
+            - generic [ref=e466] [cursor=pointer]:
+              - generic [ref=e467]: 
+              - text: opcua
+            - generic [ref=e469]:
+              - generic [ref=e471]: opcua read
+              - generic [ref=e477]: opcua write
+          - generic [ref=e482]:
+            - generic [ref=e483] [cursor=pointer]:
+              - generic [ref=e484]: 
+              - text: modbus
+            - generic [ref=e486]:
+              - generic [ref=e488]:
+                - text: Modbus
+                - text: Server
+              - generic [ref=e494]: write
+              - generic [ref=e500]: flex writer
+              - generic [ref=e506]: flex getter
+              - generic [ref=e512]: read
+        - generic [ref=e518]:
+          - button "" [ref=e519] [cursor=pointer]:
+            - generic [ref=e520]: 
+          - button "" [ref=e521] [cursor=pointer]:
+            - generic [ref=e522]: 
+        - text: 
+      - generic [ref=e523]:
+        - generic [ref=e524]:
+          - list [ref=e526]:
+            - text:   
+            - listitem [ref=e527]:
+              - link " config" [ref=e528] [cursor=pointer]:
+                - /url: "#config"
+                - generic [ref=e529]: 
+                - text: config
+            - text: 
+          - generic [ref=e530]:
+            - link "" [ref=e531] [cursor=pointer]:
+              - /url: "#info"
+              - generic [ref=e532]: 
+            - link "" [ref=e533] [cursor=pointer]:
+              - /url: "#help"
+              - generic [ref=e534]: 
+            - link "" [ref=e535] [cursor=pointer]:
+              - /url: "#debug"
+              - generic [ref=e536]: 
+            - link "" [ref=e537]:
+              - /url: "#config"
+              - generic [ref=e538]: 
+            - text: 
+            - link "" [ref=e539] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e540]: 
+        - generic [ref=e541]:
+          - text:                                                         
+          - generic [ref=e543]:
+            - generic [ref=e545]:
+              - link "all" [ref=e546]:
+                - /url: "#"
+              - link "unused" [ref=e547] [cursor=pointer]:
+                - /url: "#"
+            - generic [ref=e549]:
+              - generic [ref=e550] [cursor=pointer]:
+                - generic [ref=e551]: 
+                - text: On all flows
+              - list [ref=e552]:
+                - listitem [ref=e707]: modbus-config
+                - listitem [ref=e708]:
+                  - generic [ref=e709] [cursor=pointer]:
+                    - generic [ref=e710]: Local Modbus
+                    - link "2" [ref=e712]:
+                      - /url: "#"
+                - listitem [ref=e713]: postgres-config
+                - listitem [ref=e714]:
+                  - generic [ref=e715] [cursor=pointer]:
+                    - generic [ref=e716]: Local PostgreSQL
+                    - link "1" [ref=e718]:
+                      - /url: "#"
+            - generic [ref=e567] [cursor=pointer]:
+              - generic [ref=e568]: 
+              - text:   Modbus → PostgreSQL POC
+          - text:                                                                                                                                                                                                                                                                                                                                                                                        
+        - generic [ref=e571]:
+          - generic [ref=e572]:
+            - link "" [ref=e573] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e574]: 
+            - link "" [ref=e575] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e576]: 
+          - text: 
+      - generic [ref=e577]: 
+    - text:  
+    - generic [ref=e583]: MQTT Broker
+    - generic: Random Values
+  - generic [ref=e678]:
+    - alert
+    - alert

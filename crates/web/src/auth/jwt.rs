@@ -202,7 +202,7 @@ fn simple_hmac_sha256(key: &[u8], message: &[u8]) -> Vec<u8> {
     // Outer hash: SHA256(opad_key || inner_result)
     let mut outer_hasher = Sha256::new();
     outer_hasher.update(&opad_key);
-    outer_hasher.update(&inner_result);
+    outer_hasher.update(inner_result);
     outer_hasher.finalize().to_vec()
 }
 
