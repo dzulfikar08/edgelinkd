@@ -54,3 +54,49 @@ impl Session {
         self.outbound_tx.try_send(packet).is_ok()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn session_new_fields() {
+        let (tx, _rx) = mpsc::channel(16);
+        let s = Session::new("client-1".into(), 30, tx);
+        assert_eq!(s.client_id(), "client-1");
+        assert_eq!(s.keep_alive(), 30);
+    }
+
+    #[test]
+    fn session_send_raw_succeeds() {
+        let (tx, mut rx) = mpsc::channel(16);
+        let s = Session::new("c".into(), 60, tx);
+        assert!(s.send_raw(vec![1, 2, 3]));
+        let received = rx.try_recv().unwrap();
+        assert_eq!(received, vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn session_send_raw_full_channel_returns_false() {
+        let (tx, rx) = mpsc::channel(1);
+        let s = Session::new("c".into(), 60, tx);
+        assert!(s.send_raw(vec![1])); // fills channel
+        assert!(!s.send_raw(vec![2])); // should fail
+        drop(rx); // suppress unused warning
+    }
+
+    #[test]
+    fn session_send_raw_closed_channel_returns_false() {
+        let (tx, rx) = mpsc::channel(16);
+        let s = Session::new("c".into(), 60, tx);
+        drop(rx);
+        assert!(!s.send_raw(vec![1]));
+    }
+
+    #[test]
+    fn next_packet_id_monotonic() {
+        let first = next_packet_id();
+        let second = next_packet_id();
+        assert!(second > first || (first == u16::MAX && second == 1));
+    }
+}

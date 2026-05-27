@@ -255,10 +255,30 @@ impl ModbusConnection {
         if self.context.is_some() {
             return Ok(());
         }
+        let auto_connect = self.config.auto_connect.unwrap_or(true);
+        if !auto_connect {
+            return Err(anyhow::anyhow!("Not connected and auto_connect is disabled"));
+        }
+        if let Some(reconnect_ms) = self.config.reconnect_timeout {
+            tokio::time::sleep(std::time::Duration::from_millis(reconnect_ms)).await;
+        }
         self.connect().await
     }
 
     async fn connect(&mut self) -> crate::Result<()> {
+        match self.config.transport.as_str() {
+            "tcp" => self.connect_tcp().await,
+            #[cfg(feature = "nodes_modbus_serial")]
+            "serial" | "rtu" => self.connect_rtu().await,
+            #[cfg(not(feature = "nodes_modbus_serial"))]
+            "serial" | "rtu" => Err(anyhow::anyhow!(
+                "Serial/RTU transport requires the 'nodes_modbus_serial' feature"
+            )),
+            _ => Err(anyhow::anyhow!("Unsupported transport: '{}'", self.config.transport)),
+        }
+    }
+
+    async fn connect_tcp(&mut self) -> crate::Result<()> {
         let socket_addr = format!("{}:{}", self.config.host, self.config.port);
         let addr: std::net::SocketAddr = socket_addr
             .parse()
@@ -288,9 +308,46 @@ impl ModbusConnection {
         }
     }
 
+    #[cfg(feature = "nodes_modbus_serial")]
+    async fn connect_rtu(&mut self) -> crate::Result<()> {
+        use tokio_modbus::client::rtu;
+
+        let serial_port = self.config.serial_port.as_deref()
+            .ok_or_else(|| anyhow::anyhow!("serial_port is required for RTU transport"))?;
+        let baud_rate = self.config.baud_rate.unwrap_or(9600);
+
+        let builder = tokio_serial::new(serial_port, baud_rate);
+        let port = tokio_serial::SerialStream::open(&builder)
+            .map_err(|e| anyhow::anyhow!("Failed to open serial port '{}': {}", serial_port, e))?;
+
+        let ctx = rtu::attach_slave(port, Slave(self.config.unit_id));
+        self.context = Some(ctx);
+
+        log::info!(
+            "[modbus-config] Connected RTU to {} @ {} baud, unit {}",
+            serial_port, baud_rate, self.config.unit_id
+        );
+        Ok(())
+    }
+
     fn disconnect(&mut self) {
         if self.context.take().is_some() {
             log::info!("[modbus-config] Disconnected");
+        }
+    }
+
+    /// Attempt to reconnect after a failure. Returns true if reconnection succeeded.
+    async fn try_reconnect(&mut self) -> bool {
+        self.disconnect();
+        if !self.config.auto_connect.unwrap_or(true) {
+            return false;
+        }
+        if let Some(reconnect_ms) = self.config.reconnect_timeout {
+            tokio::time::sleep(std::time::Duration::from_millis(reconnect_ms)).await;
+        }
+        match self.connect().await {
+            Ok(()) => true,
+            Err(_) => false,
         }
     }
 
@@ -306,13 +363,16 @@ impl ModbusConnection {
             .ok_or_else(|| anyhow::anyhow!("Not connected"))?;
         match ctx.read_coils(address, quantity).await {
             Ok(Ok(response)) => Ok(response),
-            Ok(Err(e)) => {
-                self.disconnect();
-                Err(anyhow::anyhow!("Read error: {}", e))
-            }
-            Err(e) => {
-                self.disconnect();
-                Err(anyhow::anyhow!("Read failed: {}", e))
+            err => {
+                if self.try_reconnect().await {
+                    let ctx = self.context.as_mut()
+                        .ok_or_else(|| anyhow::anyhow!("Not connected"))?;
+                    ctx.read_coils(address, quantity).await
+                        .map_err(|e| anyhow::anyhow!("Read failed: {}", e))
+                        .and_then(|r| r.map_err(|e| anyhow::anyhow!("Read error: {}", e)))
+                } else {
+                    map_modbus_err(err)
+                }
             }
         }
     }
@@ -324,13 +384,16 @@ impl ModbusConnection {
             .ok_or_else(|| anyhow::anyhow!("Not connected"))?;
         match ctx.read_discrete_inputs(address, quantity).await {
             Ok(Ok(response)) => Ok(response),
-            Ok(Err(e)) => {
-                self.disconnect();
-                Err(anyhow::anyhow!("Read discrete inputs error: {}", e))
-            }
-            Err(e) => {
-                self.disconnect();
-                Err(anyhow::anyhow!("Read discrete inputs failed: {}", e))
+            err => {
+                if self.try_reconnect().await {
+                    let ctx = self.context.as_mut()
+                        .ok_or_else(|| anyhow::anyhow!("Not connected"))?;
+                    ctx.read_discrete_inputs(address, quantity).await
+                        .map_err(|e| anyhow::anyhow!("Read discrete inputs failed: {}", e))
+                        .and_then(|r| r.map_err(|e| anyhow::anyhow!("Read discrete inputs error: {}", e)))
+                } else {
+                    map_modbus_err(err)
+                }
             }
         }
     }
@@ -342,13 +405,16 @@ impl ModbusConnection {
             .ok_or_else(|| anyhow::anyhow!("Not connected"))?;
         match ctx.read_holding_registers(address, quantity).await {
             Ok(Ok(response)) => Ok(response),
-            Ok(Err(e)) => {
-                self.disconnect();
-                Err(anyhow::anyhow!("Read error: {}", e))
-            }
-            Err(e) => {
-                self.disconnect();
-                Err(anyhow::anyhow!("Read failed: {}", e))
+            err => {
+                if self.try_reconnect().await {
+                    let ctx = self.context.as_mut()
+                        .ok_or_else(|| anyhow::anyhow!("Not connected"))?;
+                    ctx.read_holding_registers(address, quantity).await
+                        .map_err(|e| anyhow::anyhow!("Read failed: {}", e))
+                        .and_then(|r| r.map_err(|e| anyhow::anyhow!("Read error: {}", e)))
+                } else {
+                    map_modbus_err(err)
+                }
             }
         }
     }
@@ -360,13 +426,16 @@ impl ModbusConnection {
             .ok_or_else(|| anyhow::anyhow!("Not connected"))?;
         match ctx.read_input_registers(address, quantity).await {
             Ok(Ok(response)) => Ok(response),
-            Ok(Err(e)) => {
-                self.disconnect();
-                Err(anyhow::anyhow!("Read error: {}", e))
-            }
-            Err(e) => {
-                self.disconnect();
-                Err(anyhow::anyhow!("Read failed: {}", e))
+            err => {
+                if self.try_reconnect().await {
+                    let ctx = self.context.as_mut()
+                        .ok_or_else(|| anyhow::anyhow!("Not connected"))?;
+                    ctx.read_input_registers(address, quantity).await
+                        .map_err(|e| anyhow::anyhow!("Read failed: {}", e))
+                        .and_then(|r| r.map_err(|e| anyhow::anyhow!("Read error: {}", e)))
+                } else {
+                    map_modbus_err(err)
+                }
             }
         }
     }
@@ -378,13 +447,16 @@ impl ModbusConnection {
             .ok_or_else(|| anyhow::anyhow!("Not connected"))?;
         match ctx.write_single_coil(address, value).await {
             Ok(Ok(())) => Ok(()),
-            Ok(Err(e)) => {
-                self.disconnect();
-                Err(anyhow::anyhow!("Write coil error: {}", e))
-            }
-            Err(e) => {
-                self.disconnect();
-                Err(anyhow::anyhow!("Write coil failed: {}", e))
+            err => {
+                if self.try_reconnect().await {
+                    let ctx = self.context.as_mut()
+                        .ok_or_else(|| anyhow::anyhow!("Not connected"))?;
+                    ctx.write_single_coil(address, value).await
+                        .map_err(|e| anyhow::anyhow!("Write coil failed: {}", e))
+                        .and_then(|r| r.map_err(|e| anyhow::anyhow!("Write coil error: {}", e)))
+                } else {
+                    map_modbus_err_unit(err)
+                }
             }
         }
     }
@@ -396,13 +468,16 @@ impl ModbusConnection {
             .ok_or_else(|| anyhow::anyhow!("Not connected"))?;
         match ctx.write_single_register(address, value).await {
             Ok(Ok(())) => Ok(()),
-            Ok(Err(e)) => {
-                self.disconnect();
-                Err(anyhow::anyhow!("Write error: {}", e))
-            }
-            Err(e) => {
-                self.disconnect();
-                Err(anyhow::anyhow!("Write failed: {}", e))
+            err => {
+                if self.try_reconnect().await {
+                    let ctx = self.context.as_mut()
+                        .ok_or_else(|| anyhow::anyhow!("Not connected"))?;
+                    ctx.write_single_register(address, value).await
+                        .map_err(|e| anyhow::anyhow!("Write failed: {}", e))
+                        .and_then(|r| r.map_err(|e| anyhow::anyhow!("Write error: {}", e)))
+                } else {
+                    map_modbus_err_unit(err)
+                }
             }
         }
     }
@@ -414,13 +489,16 @@ impl ModbusConnection {
             .ok_or_else(|| anyhow::anyhow!("Not connected"))?;
         match ctx.write_multiple_coils(address, values).await {
             Ok(Ok(())) => Ok(()),
-            Ok(Err(e)) => {
-                self.disconnect();
-                Err(anyhow::anyhow!("Write multiple coils error: {}", e))
-            }
-            Err(e) => {
-                self.disconnect();
-                Err(anyhow::anyhow!("Write multiple coils failed: {}", e))
+            err => {
+                if self.try_reconnect().await {
+                    let ctx = self.context.as_mut()
+                        .ok_or_else(|| anyhow::anyhow!("Not connected"))?;
+                    ctx.write_multiple_coils(address, values).await
+                        .map_err(|e| anyhow::anyhow!("Write multiple coils failed: {}", e))
+                        .and_then(|r| r.map_err(|e| anyhow::anyhow!("Write multiple coils error: {}", e)))
+                } else {
+                    map_modbus_err_unit(err)
+                }
             }
         }
     }
@@ -432,24 +510,47 @@ impl ModbusConnection {
             .ok_or_else(|| anyhow::anyhow!("Not connected"))?;
         match ctx.write_multiple_registers(address, values).await {
             Ok(Ok(())) => Ok(()),
-            Ok(Err(e)) => {
-                self.disconnect();
-                Err(anyhow::anyhow!("Write error: {}", e))
-            }
-            Err(e) => {
-                self.disconnect();
-                Err(anyhow::anyhow!("Write failed: {}", e))
+            err => {
+                if self.try_reconnect().await {
+                    let ctx = self.context.as_mut()
+                        .ok_or_else(|| anyhow::anyhow!("Not connected"))?;
+                    ctx.write_multiple_registers(address, values).await
+                        .map_err(|e| anyhow::anyhow!("Write failed: {}", e))
+                        .and_then(|r| r.map_err(|e| anyhow::anyhow!("Write error: {}", e)))
+                } else {
+                    map_modbus_err_unit(err)
+                }
             }
         }
     }
 }
 
+fn map_modbus_err<T, E1: std::fmt::Display, E2: std::fmt::Display>(result: Result<Result<T, E1>, E2>) -> crate::Result<T> {
+    match result {
+        Ok(Ok(v)) => Ok(v),
+        Ok(Err(e)) => Err(anyhow::anyhow!("Modbus protocol error: {}", e)),
+        Err(e) => Err(anyhow::anyhow!("Modbus transport error: {}", e)),
+    }
+}
+
+fn map_modbus_err_unit<E1: std::fmt::Display, E2: std::fmt::Display>(result: Result<Result<(), E1>, E2>) -> crate::Result<()> {
+    match result {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(e)) => Err(anyhow::anyhow!("Modbus protocol error: {}", e)),
+        Err(e) => Err(anyhow::anyhow!("Modbus transport error: {}", e)),
+    }
+}
+
+use super::modbus_queue::ModbusRequestQueue;
+
 #[derive(Debug)]
 #[global_node("modbus-config", red_name = "modbus-config", module = "node-red")]
 pub(crate) struct ModbusConfigNode {
     base: BaseGlobalNodeState,
+    #[allow(dead_code)]
     config: ModbusConfig,
     pub(crate) connection: Arc<Mutex<ModbusConnection>>,
+    pub(crate) queue: Arc<ModbusRequestQueue>,
 }
 
 impl ModbusConfigNode {
@@ -463,6 +564,10 @@ impl ModbusConfigNode {
             context: None,
             config: modbus_config.clone(),
         };
+        let queue = ModbusRequestQueue::new(
+            modbus_config.parallel_unit_ids.unwrap_or(false),
+            modbus_config.command_delay,
+        );
         let state = BaseGlobalNodeState {
             id: config.id,
             name: config.name.clone(),
@@ -475,6 +580,7 @@ impl ModbusConfigNode {
             base: state,
             config: modbus_config,
             connection: Arc::new(Mutex::new(connection)),
+            queue: Arc::new(queue),
         }))
     }
 }

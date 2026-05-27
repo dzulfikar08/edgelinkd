@@ -25,6 +25,12 @@ pub use cliargs::*;
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Arc::new(CliArgs::parse());
+
+    // Handle --generate-completions and exit early
+    if args.maybe_generate_completions() {
+        return Ok(());
+    }
+
     if let Err(ref err) = runner::run_app(args).await {
         log::error!("Application error: {err}");
         process::exit(-1);

@@ -1,0 +1,78 @@
+{
+  "scenario": "switch",
+  "description": "inject -> switch(5 rules) -> 5 debug nodes: measures routing/branching performance",
+  "iterations": 1000,
+  "timeout_seconds": 30,
+  "flow": [
+    {
+      "id": "s3_tab",
+      "label": "Scenario 3: Switch",
+      "type": "tab"
+    },
+    {
+      "id": "s3_inject",
+      "name": "bench-inject",
+      "type": "inject",
+      "z": "s3_tab",
+      "once": false,
+      "onceDelay": 0,
+      "payload": "route-a",
+      "payloadType": "str",
+      "repeat": "",
+      "crontab": "",
+      "props": [{ "p": "payload" }],
+      "topic": "bench/switch",
+      "wires": [["s3_switch"]]
+    },
+    {
+      "id": "s3_switch",
+      "name": "bench-switch",
+      "type": "switch",
+      "z": "s3_tab",
+      "property": "payload",
+      "propertyType": "msg",
+      "rules": [
+        { "t": "eq", "v": "route-a", "vt": "str" },
+        { "t": "eq", "v": "route-b", "vt": "str" },
+        { "t": "eq", "v": "route-c", "vt": "str" },
+        { "t": "eq", "v": "route-d", "vt": "str" },
+        { "t": "else" }
+      ],
+      "checkall": "true",
+      "repair": false,
+      "outputs": 5,
+      "wires": [
+        ["s3_debug_0"],
+        ["s3_debug_1"],
+        ["s3_debug_2"],
+        ["s3_debug_3"],
+        ["s3_debug_4"]
+      ]
+    },
+    {
+      "id": "s3_debug_0", "name": "debug-route-a", "type": "debug", "z": "s3_tab",
+      "active": true, "console": false, "tosidebar": true, "tostatus": false,
+      "complete": "payload", "targetType": "msg", "statusType": "auto", "statusVal": "", "wires": []
+    },
+    {
+      "id": "s3_debug_1", "name": "debug-route-b", "type": "debug", "z": "s3_tab",
+      "active": true, "console": false, "tosidebar": true, "tostatus": false,
+      "complete": "payload", "targetType": "msg", "statusType": "auto", "statusVal": "", "wires": []
+    },
+    {
+      "id": "s3_debug_2", "name": "debug-route-c", "type": "debug", "z": "s3_tab",
+      "active": true, "console": false, "tosidebar": true, "tostatus": false,
+      "complete": "payload", "targetType": "msg", "statusType": "auto", "statusVal": "", "wires": []
+    },
+    {
+      "id": "s3_debug_3", "name": "debug-route-d", "type": "debug", "z": "s3_tab",
+      "active": true, "console": false, "tosidebar": true, "tostatus": false,
+      "complete": "payload", "targetType": "msg", "statusType": "auto", "statusVal": "", "wires": []
+    },
+    {
+      "id": "s3_debug_4", "name": "debug-route-else", "type": "debug", "z": "s3_tab",
+      "active": true, "console": false, "tosidebar": true, "tostatus": false,
+      "complete": "payload", "targetType": "msg", "statusType": "auto", "statusVal": "", "wires": []
+    }
+  ]
+}

@@ -42,6 +42,8 @@ mod test_comment;
 mod test_file;
 mod test_watch;
 
+mod test_flow_import;
+
 mod test_csv;
 mod test_html;
 mod test_xml;
@@ -51,6 +53,7 @@ mod test_tcp;
 mod test_udp;
 mod test_mqtt;
 mod test_mqtt_broker;
+mod test_mqtt_flow;
 mod test_websocket;
 
 // Database driver tests

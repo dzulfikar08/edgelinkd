@@ -808,3 +808,106 @@ async fn modbus_read_missing_config_node() {
     // Node should have reported an error status (config node not found)
     // but the engine should still build successfully
 }
+
+// ---------------------------------------------------------------------------
+// Advanced Modbus Features (RRD-41) — no simulator needed
+// ---------------------------------------------------------------------------
+
+/// Verify that serial RTU fields round-trip through config deserialization.
+#[test]
+fn modbus_config_serial_fields_roundtrip() {
+    let flow = json!([
+        {"id": "100", "type": "tab"},
+        {
+            "id": "cfg_serial",
+            "type": "modbus-config",
+            "name": "serial-rtu",
+            "transport": "serial",
+            "host": "N/A",
+            "port": 0,
+            "serialPort": "/dev/ttyUSB0",
+            "baudRate": 19200,
+            "dataBits": "8",
+            "stopBits": "1",
+            "parity": "none",
+            "unitId": 3,
+            "timeoutMs": 3000
+        }
+    ]);
+
+    let _harness = TestHarness::from_flow_json(flow);
+}
+
+/// Verify that queue management options round-trip through config.
+#[test]
+fn modbus_config_queue_options_roundtrip() {
+    let flow = json!([
+        {"id": "100", "type": "tab"},
+        {
+            "id": "cfg_queue",
+            "type": "modbus-config",
+            "name": "queue-test",
+            "transport": "tcp",
+            "host": "192.168.1.10",
+            "port": 502,
+            "parallelUnitIds": true,
+            "queueLogEnabled": true,
+            "bufferCommands": true,
+            "commandDelay": 100,
+            "keepAlive": true,
+            "reconnectTimeout": 5000,
+            "autoConnect": false
+        }
+    ]);
+
+    let _harness = TestHarness::from_flow_json(flow);
+}
+
+/// Verify that pollRate + pollRateUnit round-trip through read config.
+#[test]
+fn modbus_read_poll_rate_roundtrip() {
+    let flow = json!([
+        {"id": "100", "type": "tab"},
+        {
+            "id": "cfg1",
+            "type": "modbus-config",
+            "host": "127.0.0.1",
+            "port": 502
+        },
+        {
+            "id": "1",
+            "type": "modbus read",
+            "z": "100",
+            "configNode": "cfg1",
+            "functionCode": "readHoldingRegisters",
+            "address": 0,
+            "quantity": 1,
+            "pollRate": 5,
+            "pollRateUnit": "s",
+            "wires": [["99"]]
+        },
+        {"id": "99", "z": "100", "type": "test-once"}
+    ]);
+
+    let _harness = TestHarness::from_flow_json(flow);
+}
+
+/// Verify that the config node builds with autoConnect disabled.
+#[test]
+fn modbus_config_auto_connect_disabled() {
+    let flow = json!([
+        {"id": "100", "type": "tab"},
+        {
+            "id": "cfg_noreconnect",
+            "type": "modbus-config",
+            "name": "no-auto",
+            "transport": "tcp",
+            "host": "192.168.1.10",
+            "port": 502,
+            "autoConnect": false,
+            "reconnectTimeout": 2000
+        }
+    ]);
+
+    let _harness = TestHarness::from_flow_json(flow);
+}

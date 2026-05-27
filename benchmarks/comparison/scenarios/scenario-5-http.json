@@ -1,0 +1,58 @@
+{
+  "scenario": "http",
+  "description": "http-in -> http-out: measures HTTP request/response throughput (requires HTTP load generator)",
+  "iterations": 1000,
+  "timeout_seconds": 60,
+  "requires": ["http-load-generator"],
+  "flow": [
+    {
+      "id": "s5_tab",
+      "label": "Scenario 5: HTTP",
+      "type": "tab"
+    },
+    {
+      "id": "s5_http_in",
+      "name": "bench-http-in",
+      "type": "http in",
+      "z": "s5_tab",
+      "name": "",
+      "url": "/bench/http",
+      "method": "get",
+      "upload": false,
+      "swaggerDoc": "",
+      "x": 160,
+      "y": 100,
+      "wires": [["s5_http_out"]]
+    },
+    {
+      "id": "s5_http_out",
+      "name": "bench-http-out",
+      "type": "http response",
+      "z": "s5_tab",
+      "name": "",
+      "statusCode": "200",
+      "headers": {
+        "content-type": "application/json"
+      },
+      "x": 380,
+      "y": 100,
+      "wires": []
+    },
+    {
+      "id": "s5_function",
+      "name": "set-response",
+      "type": "function",
+      "z": "s5_tab",
+      "func": "msg.payload = { status: 'ok', ts: Date.now() };\nreturn msg;",
+      "outputs": 1,
+      "timeout": 0,
+      "noerr": 0,
+      "initialize": "",
+      "finalize": "",
+      "libs": [],
+      "x": 270,
+      "y": 100,
+      "wires": [["s5_http_out"]]
+    }
+  ]
+}

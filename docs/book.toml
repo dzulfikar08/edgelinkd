@@ -1,0 +1,14 @@
+[book]
+title = "Rust-Red Documentation"
+description = "High-performance Node-RED compatible runtime engine in Rust"
+authors = ["Dzulfikar Ats Tsauri"]
+language = "en"
+multilingual = false
+src = "src"
+
+[build]
+build-dir = "book"
+
+[output.html]
+default-theme = "navy"
+git-repository-url = "https://github.com/dzulfikar08/rust-red"

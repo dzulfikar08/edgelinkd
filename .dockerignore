@@ -1,0 +1,64 @@
+# Build artifacts
+target/
+
+# Version control
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# CI/CD
+.github/
+
+# Benchmarks
+benchmarks/
+
+# Node.js (only needed for 3rd-party/node-red build, already included)
+node_modules/
+
+# Claude Code workspace
+.claude/
+
+# Screenshots and images
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+
+# Logs
+*.log
+
+# Version snapshots
+versions/
+
+# Python
+__pycache__/
+*.pyc
+pytest.ini
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Config overrides (use defaults in container)
+rust-red.dev.toml
+rust-red.prod.toml
+log.toml
+
+# Playwright MCP state
+.playwright-mcp/
+
+# Proof of concept / experimental
+poc/
+
+# Data directory (mounted at runtime)
+data/

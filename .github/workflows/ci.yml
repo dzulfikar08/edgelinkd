@@ -1,0 +1,150 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - ".github/workflows/**"
+      - "src/**"
+      - "tests/**"
+      - "crates/**"
+      - "node-plugins/**"
+      - "3rd-party/node-red/**"
+      - "benchmarks/**"
+      - "*.rs"
+      - "*.toml"
+      - "*.lock"
+  pull_request:
+    branches:
+      - master
+    paths:
+      - ".github/workflows/**"
+      - "src/**"
+      - "tests/**"
+      - "crates/**"
+      - "node-plugins/**"
+      - "3rd-party/node-red/**"
+      - "benchmarks/**"
+      - "*.rs"
+      - "*.toml"
+      - "*.lock"
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: short
+
+jobs:
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-targets: true
+          cache-on-failure: true
+      - name: Cargo check
+        run: cargo check --workspace --features default
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-targets: true
+          cache-on-failure: true
+      - name: Clippy
+        run: cargo clippy --workspace --features default --tests -- -D warnings
+        continue-on-error: true
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-targets: true
+          cache-on-failure: true
+      - name: Build tests
+        run: cargo nextest run --workspace --features default --no-run
+      - name: Run tests
+        run: cargo nextest run --workspace --features default
+      - name: Run doc tests
+        run: cargo test --workspace --features default --doc
+
+  build-release:
+    name: Release Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-targets: true
+          cache-on-failure: true
+      - name: Build release
+        run: cargo build --release --features full
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-red-linux-amd64
+          path: target/release/rust-red
+          retention-days: 7

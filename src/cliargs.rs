@@ -1,4 +1,7 @@
-use clap::{Parser, Subcommand};
+use std::io;
+
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::{generate, Shell};
 
 const LONG_ABOUT: &str = r#"
 Rust-Red Daemon Program
@@ -38,6 +41,10 @@ pub struct CliArgs {
     /// Use specified user directory
     #[arg(short = 'u', long, global = true)]
     pub user_dir: Option<String>,
+
+    /// Generate shell completions and print to stdout
+    #[arg(long, value_name = "SHELL")]
+    pub generate_completions: Option<Shell>,
 
     #[command(subcommand)]
     pub command: Option<Commands>,
@@ -84,6 +91,19 @@ impl CliArgs {
         flows_path.is_some()
     }
     */
+
+    /// Handle --generate-completions: print shell completions to stdout and exit.
+    /// Returns true if completions were generated (caller should exit), false otherwise.
+    pub fn maybe_generate_completions(&self) -> bool {
+        if let Some(shell) = self.generate_completions {
+            let mut cmd = Self::command();
+            let name = cmd.get_name().to_string();
+            generate(shell, &mut cmd, name, &mut io::stdout());
+            true
+        } else {
+            false
+        }
+    }
 
     /// Merge CliArgs into config::Config, overriding config values with CLI values if set
     pub fn merge_into_config_builder(

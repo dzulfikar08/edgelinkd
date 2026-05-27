@@ -1,0 +1,34 @@
+# =============================================================================
+# rust-red — Docker Compose
+# =============================================================================
+# Start:
+#   docker compose up -d
+# Stop:
+#   docker compose down
+# Rebuild after code changes:
+#   docker compose up -d --build
+# View logs:
+#   docker compose logs -f rust-red
+# =============================================================================
+
+services:
+  rust-red:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: rust-red:latest
+    container_name: rust-red
+    restart: unless-stopped
+    ports:
+      - "1880:1880"   # Web UI / Admin API
+      - "1883:1883"   # Embedded MQTT broker
+    volumes:
+      - ./data:/data
+    environment:
+      - RUST_LOG=info
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:1880/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3

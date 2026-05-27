@@ -1,0 +1,143 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: short
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-latest
+            artifact_name: rust-red
+            asset_name: rust-red-linux-amd64
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-latest
+            artifact_name: rust-red
+            asset_name: rust-red-linux-arm64
+          - target: aarch64-apple-darwin
+            runner: macos-latest
+            artifact_name: rust-red
+            asset_name: rust-red-macos-arm64
+          - target: x86_64-apple-darwin
+            runner: macos-13
+            artifact_name: rust-red
+            asset_name: rust-red-macos-x86_64
+          - target: x86_64-pc-windows-msvc
+            runner: windows-latest
+            artifact_name: rust-red.exe
+            asset_name: rust-red-windows-amd64.exe
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config
+
+      - name: Install cross-compilation tools for aarch64-linux
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
+
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+          cache-targets: true
+          cache-on-failure: true
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }} --features full
+
+      - name: Strip binary (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+          retention-days: 1
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: false
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-output
+          for dir in release-artifacts/*/; do
+            name=$(basename "$dir")
+            if [[ "$name" == *.exe ]]; then
+              cp "${dir}rust-red.exe" "release-output/${name}"
+            else
+              cp "${dir}rust-red" "release-output/${name}"
+            fi
+          done
+          # Generate sha256 checksums
+          cd release-output
+          sha256sum * > checksums-sha256.txt
+          echo "Checksums:"
+          cat checksums-sha256.txt
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ steps.version.outputs.VERSION }}
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            release-output/*
+          body: |
+            ## Downloads
+
+            | Platform | File |
+            |----------|------|
+            | Linux (x86_64) | `rust-red-linux-amd64` |
+            | Linux (ARM64) | `rust-red-linux-arm64` |
+            | macOS (ARM64) | `rust-red-macos-arm64` |
+            | macOS (x86_64) | `rust-red-macos-x86_64` |
+            | Windows (x86_64) | `rust-red-windows-amd64.exe` |
+
+            Verify integrity with `sha256sum -c checksums-sha256.txt`.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -444,3 +444,151 @@ fn encode_remaining_length_vec(buf: &mut Vec<u8>, mut length: usize) {
         if length == 0 { break; }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encode_connack_format() {
+        let bytes = encode_connack(false, 0x00);
+        // Fixed header: CONNACK (0x20), remaining length 2, session_present=0, rc=0
+        assert_eq!(bytes[0], 0x20);
+        assert_eq!(bytes[1], 2);
+        assert_eq!(bytes[2], 0x00);
+        assert_eq!(bytes[3], 0x00);
+    }
+
+    #[test]
+    fn encode_connack_session_present() {
+        let bytes = encode_connack(true, 0x00);
+        assert_eq!(bytes[2], 0x01);
+    }
+
+    #[test]
+    fn encode_connack_auth_failure() {
+        let bytes = encode_connack(false, 0x05);
+        assert_eq!(bytes[3], 0x05);
+    }
+
+    #[test]
+    fn encode_publish_qos0() {
+        let bytes = encode_publish("test/topic", b"hello", QoS::AtMostOnce, false, false, None);
+        // First byte: PUBLISH (0x30), no DUP, QoS 0, no retain
+        assert_eq!(bytes[0], 0x30);
+        // Topic length (2 bytes) + "test/topic" (10 bytes) + "hello" (5 bytes) = 17
+        assert_eq!(bytes[1], 17);
+        // Topic length MSB/LSB
+        assert_eq!(&bytes[2..4], 10u16.to_be_bytes());
+        // Topic
+        assert_eq!(&bytes[4..14], b"test/topic");
+        // Payload
+        assert_eq!(&bytes[14..19], b"hello");
+    }
+
+    #[test]
+    fn encode_publish_qos1_with_packet_id() {
+        let bytes = encode_publish("a/b", b"x", QoS::AtLeastOnce, false, false, Some(42));
+        assert_eq!(bytes[0], 0x32); // PUBLISH + QoS 1
+        // Topic (2+3=5) + packet_id (2) + payload (1) = 8
+        assert_eq!(bytes[1], 8);
+        // Packet ID at offset 2+2+3 = 7
+        let pid = u16::from_be_bytes([bytes[7], bytes[8]]);
+        assert_eq!(pid, 42);
+    }
+
+    #[test]
+    fn encode_publish_retain_flag() {
+        let bytes = encode_publish("t", b"", QoS::AtMostOnce, false, true, None);
+        assert_eq!(bytes[0] & 0x01, 1); // retain bit
+    }
+
+    #[test]
+    fn encode_publish_dup_flag() {
+        let bytes = encode_publish("t", b"", QoS::AtLeastOnce, true, false, Some(1));
+        assert_eq!(bytes[0] & 0x08, 0x08); // DUP bit
+    }
+
+    #[test]
+    fn puback_encoding() {
+        let bytes = encode_puback(1234);
+        assert_eq!(bytes[0], 0x40); // PUBACK
+        assert_eq!(bytes[1], 2);
+        assert_eq!(u16::from_be_bytes([bytes[2], bytes[3]]), 1234);
+    }
+
+    #[test]
+    fn suback_encoding() {
+        let bytes = encode_suback(10, &[0x00, 0x01]);
+        assert_eq!(bytes[0], 0x90); // SUBACK
+        assert_eq!(bytes[1], 4); // 2 + 2 reason codes
+        assert_eq!(u16::from_be_bytes([bytes[2], bytes[3]]), 10);
+        assert_eq!(&bytes[4..6], &[0x00, 0x01]);
+    }
+
+    #[test]
+    fn unsuback_encoding() {
+        let bytes = encode_unsuback(99);
+        assert_eq!(bytes[0], 0xB0); // UNSUBACK
+        assert_eq!(bytes[1], 2);
+        assert_eq!(u16::from_be_bytes([bytes[2], bytes[3]]), 99);
+    }
+
+    #[test]
+    fn pingresp_encoding() {
+        let bytes = encode_pingresp();
+        assert_eq!(bytes, vec![0xD0, 0x00]);
+    }
+
+    #[test]
+    fn encode_remaining_length_small() {
+        let mut buf = Vec::new();
+        encode_remaining_length_vec(&mut buf, 0);
+        assert_eq!(buf, vec![0]);
+    }
+
+    #[test]
+    fn encode_remaining_length_medium() {
+        let mut buf = Vec::new();
+        encode_remaining_length_vec(&mut buf, 127);
+        assert_eq!(buf, vec![127]);
+    }
+
+    #[test]
+    fn encode_remaining_length_two_bytes() {
+        let mut buf = Vec::new();
+        encode_remaining_length_vec(&mut buf, 128);
+        assert_eq!(buf, vec![0x80, 0x01]);
+    }
+
+    #[test]
+    fn encode_remaining_length_large() {
+        let mut buf = Vec::new();
+        encode_remaining_length_vec(&mut buf, 16383);
+        assert_eq!(buf, vec![0xFF, 0x7F]);
+    }
+
+    #[test]
+    fn decode_publish_roundtrip() {
+        let original = encode_publish("round/trip", b"payload", QoS::AtLeastOnce, false, false, Some(77));
+        // Manually construct header and buffer from the encoded bytes
+        let first_byte = original[0];
+        let packet_type_num = (first_byte >> 4) & 0x0F;
+        assert_eq!(packet_type_num, PacketType::Publish as u8);
+
+        let header = FixedHeader {
+            packet_type: PacketType::Publish,
+            flags: first_byte & 0x0F,
+            remaining_length: original.len() - 2, // approximate (only works for small packets)
+        };
+
+        let mut buf = BytesMut::from(&original[2..]);
+        let publish = decode_publish(&mut buf, &header).unwrap();
+        assert_eq!(publish.topic, "round/trip");
+        assert_eq!(&publish.payload[..], b"payload");
+        assert_eq!(publish.qos, QoS::AtLeastOnce);
+        assert_eq!(publish.packet_id, Some(77));
+        assert!(!publish.retain);
+        assert!(!publish.dup);
+    }
+}

@@ -287,6 +287,11 @@ impl MqttBrokerNode {
     pub async fn list_subscriptions(&self) -> Vec<String> {
         self.subscriptions.lock().await.keys().cloned().collect()
     }
+
+    /// Return (host, port) parsed from the broker URL for use by mqtt_in/mqtt_out.
+    pub fn broker_addr(&self) -> (String, u16) {
+        (self.parse_host(), self.parse_port())
+    }
 }
 
 #[async_trait::async_trait]

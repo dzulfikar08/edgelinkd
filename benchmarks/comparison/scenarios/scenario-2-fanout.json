@@ -1,0 +1,81 @@
+{
+  "scenario": "fanout",
+  "description": "inject -> 10 debug nodes: measures fan-out performance (one message to N outputs)",
+  "iterations": 500,
+  "timeout_seconds": 30,
+  "flow": [
+    {
+      "id": "s2_tab",
+      "label": "Scenario 2: Fan-Out",
+      "type": "tab"
+    },
+    {
+      "id": "s2_inject",
+      "name": "bench-inject",
+      "type": "inject",
+      "z": "s2_tab",
+      "once": false,
+      "onceDelay": 0,
+      "payload": "benchmark-payload",
+      "payloadType": "str",
+      "repeat": "",
+      "crontab": "",
+      "props": [{ "p": "payload" }],
+      "topic": "bench/fanout",
+      "wires": [[
+        "s2_debug_0", "s2_debug_1", "s2_debug_2", "s2_debug_3", "s2_debug_4",
+        "s2_debug_5", "s2_debug_6", "s2_debug_7", "s2_debug_8", "s2_debug_9"
+      ]]
+    },
+    {
+      "id": "s2_debug_0", "name": "debug-0", "type": "debug", "z": "s2_tab",
+      "active": true, "console": false, "tosidebar": true, "tostatus": false,
+      "complete": "payload", "targetType": "msg", "statusType": "auto", "statusVal": "", "wires": []
+    },
+    {
+      "id": "s2_debug_1", "name": "debug-1", "type": "debug", "z": "s2_tab",
+      "active": true, "console": false, "tosidebar": true, "tostatus": false,
+      "complete": "payload", "targetType": "msg", "statusType": "auto", "statusVal": "", "wires": []
+    },
+    {
+      "id": "s2_debug_2", "name": "debug-2", "type": "debug", "z": "s2_tab",
+      "active": true, "console": false, "tosidebar": true, "tostatus": false,
+      "complete": "payload", "targetType": "msg", "statusType": "auto", "statusVal": "", "wires": []
+    },
+    {
+      "id": "s2_debug_3", "name": "debug-3", "type": "debug", "z": "s2_tab",
+      "active": true, "console": false, "tosidebar": true, "tostatus": false,
+      "complete": "payload", "targetType": "msg", "statusType": "auto", "statusVal": "", "wires": []
+    },
+    {
+      "id": "s2_debug_4", "name": "debug-4", "type": "debug", "z": "s2_tab",
+      "active": true, "console": false, "tosidebar": true, "tostatus": false,
+      "complete": "payload", "targetType": "msg", "statusType": "auto", "statusVal": "", "wires": []
+    },
+    {
+      "id": "s2_debug_5", "name": "debug-5", "type": "debug", "z": "s2_tab",
+      "active": true, "console": false, "tosidebar": true, "tostatus": false,
+      "complete": "payload", "targetType": "msg", "statusType": "auto", "statusVal": "", "wires": []
+    },
+    {
+      "id": "s2_debug_6", "name": "debug-6", "type": "debug", "z": "s2_tab",
+      "active": true, "console": false, "tosidebar": true, "tostatus": false,
+      "complete": "payload", "targetType": "msg", "statusType": "auto", "statusVal": "", "wires": []
+    },
+    {
+      "id": "s2_debug_7", "name": "debug-7", "type": "debug", "z": "s2_tab",
+      "active": true, "console": false, "tosidebar": true, "tostatus": false,
+      "complete": "payload", "targetType": "msg", "statusType": "auto", "statusVal": "", "wires": []
+    },
+    {
+      "id": "s2_debug_8", "name": "debug-8", "type": "debug", "z": "s2_tab",
+      "active": true, "console": false, "tosidebar": true, "tostatus": false,
+      "complete": "payload", "targetType": "msg", "statusType": "auto", "statusVal": "", "wires": []
+    },
+    {
+      "id": "s2_debug_9", "name": "debug-9", "type": "debug", "z": "s2_tab",
+      "active": true, "console": false, "tosidebar": true, "tostatus": false,
+      "complete": "payload", "targetType": "msg", "statusType": "auto", "statusVal": "", "wires": []
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "scenario": "delay",
+  "description": "inject -> delay(100ms) -> debug: measures timing accuracy and scheduler performance",
+  "iterations": 100,
+  "timeout_seconds": 60,
+  "flow": [
+    {
+      "id": "s6_tab",
+      "label": "Scenario 6: Delay Accuracy",
+      "type": "tab"
+    },
+    {
+      "id": "s6_inject",
+      "name": "bench-inject",
+      "type": "inject",
+      "z": "s6_tab",
+      "once": false,
+      "onceDelay": 0,
+      "payload": "benchmark-delay",
+      "payloadType": "str",
+      "repeat": "",
+      "crontab": "",
+      "props": [{ "p": "payload" }],
+      "topic": "bench/delay",
+      "wires": [["s6_delay"]]
+    },
+    {
+      "id": "s6_delay",
+      "name": "bench-delay",
+      "type": "delay",
+      "z": "s6_tab",
+      "name": "",
+      "pauseType": "delay",
+      "timeout": "100",
+      "timeoutUnits": "milliseconds",
+      "rate": "1",
+      "nbRateUnits": "1",
+      "rateUnits": "second",
+      "randomFirst": "1",
+      "randomLast": "5",
+      "randomUnits": "seconds",
+      "drop": false,
+      "allowrate": false,
+      "outputs": 1,
+      "wires": [["s6_function"]]
+    },
+    {
+      "id": "s6_function",
+      "name": "timestamp",
+      "type": "function",
+      "z": "s6_tab",
+      "func": "msg.delay_end = Date.now();\nreturn msg;",
+      "outputs": 1,
+      "timeout": 0,
+      "noerr": 0,
+      "initialize": "",
+      "finalize": "",
+      "libs": [],
+      "wires": [["s6_debug"]]
+    },
+    {
+      "id": "s6_debug",
+      "name": "bench-debug",
+      "type": "debug",
+      "z": "s6_tab",
+      "active": true,
+      "console": true,
+      "tosidebar": true,
+      "tostatus": false,
+      "complete": "true",
+      "targetType": "msg",
+      "statusType": "auto",
+      "statusVal": "",
+      "wires": []
+    }
+  ]
+}

@@ -1,6 +1,8 @@
 #[cfg(feature = "nodes_modbus")]
 pub mod modbus_config;
 #[cfg(feature = "nodes_modbus")]
+pub mod modbus_queue;
+#[cfg(feature = "nodes_modbus")]
 pub mod modbus_read;
 #[cfg(feature = "nodes_modbus")]
 pub mod modbus_write;

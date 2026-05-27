@@ -37,6 +37,7 @@
 //! - Buffer/string conversion based on content
 
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -48,6 +49,9 @@ use crate::runtime::flow::Flow;
 use crate::runtime::model::*;
 use crate::runtime::nodes::*;
 use rust_red_macro::*;
+
+use super::mqtt_broker::MqttBrokerNode;
+use super::mqtt_broker_embedded::MqttBrokerEmbeddedNode;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Default)]
 enum MqttQoS {
@@ -173,6 +177,43 @@ impl MqttInNode {
         Ok(Box::new(node))
     }
 
+    /// Resolve the broker config reference to a (host, port) pair.
+    async fn resolve_broker_addr(&self) -> crate::Result<(String, u16)> {
+        let engine = self
+            .flow()
+            .and_then(|f| f.engine())
+            .ok_or_else(|| anyhow::anyhow!("No engine available"))?;
+
+        let eid_opt = ElementId::from_str(&self.config.broker).ok();
+        let global = eid_opt
+            .and_then(|eid| engine.find_global_node_by_id(&eid))
+            .or_else(|| {
+                engine.find_global_node_by_name(&self.config.broker).ok().flatten()
+            })
+            .ok_or_else(|| anyhow::anyhow!("Broker config '{}' not found", self.config.broker))?;
+
+        // Try as MqttBrokerNode (external broker config)
+        if let Some(broker) = global.as_any().downcast_ref::<MqttBrokerNode>() {
+            return Ok(broker.broker_addr());
+        }
+
+        // Try as MqttBrokerEmbeddedNode (in-process broker)
+        if let Some(embedded) = global.as_any().downcast_ref::<MqttBrokerEmbeddedNode>() {
+            let addr_guard = embedded.bound_addr.read().await;
+            if let Some(addr) = *addr_guard {
+                let addr: std::net::SocketAddr = addr;
+                return Ok((addr.ip().to_string(), addr.port()));
+            }
+            // Broker hasn't bound yet — fall back to config values
+            return Ok(embedded.configured_addr());
+        }
+
+        Err(anyhow::anyhow!(
+            "Broker config '{}' is not a mqtt-broker or mqtt-broker-embedded node",
+            self.config.broker
+        ))
+    }
+
     async fn ensure_connection(&self) -> crate::Result<rumqttc::AsyncClient> {
         let mut connection = self.connection.lock().await;
 
@@ -180,10 +221,10 @@ impl MqttInNode {
             return Ok(connection.client.clone().unwrap());
         }
 
-        // Create connection options
-        // TODO: In a real implementation, this would get broker config from the broker ID
+        let (host, port) = self.resolve_broker_addr().await?;
+
         let client_id = format!("rust_red_in_{}", &uuid::Uuid::new_v4().to_string()[..8]);
-        let mut mqttoptions = rumqttc::MqttOptions::new(client_id, "localhost", 1883);
+        let mut mqttoptions = rumqttc::MqttOptions::new(client_id, &host, port);
         mqttoptions.set_keep_alive(Duration::from_secs(60));
         mqttoptions.set_clean_session(true);
 
@@ -195,7 +236,7 @@ impl MqttInNode {
                 match eventloop.poll().await {
                     Ok(rumqttc::Event::Incoming(rumqttc::Packet::ConnAck(connack))) => {
                         if connack.code == rumqttc::ConnectReturnCode::Success {
-                            log::info!("MQTT In connected successfully to localhost:1883");
+                            log::info!("MQTT In connected successfully to {}:{}", host, port);
                             return Ok(());
                         } else {
                             log::error!("MQTT In connection failed with code: {:?}", connack.code);

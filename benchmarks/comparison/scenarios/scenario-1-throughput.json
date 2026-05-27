@@ -1,0 +1,57 @@
+{
+  "scenario": "throughput",
+  "description": "inject -> function -> debug: maximum message rate through a single processing node",
+  "iterations": 1000,
+  "timeout_seconds": 30,
+  "flow": [
+    {
+      "id": "s1_tab",
+      "label": "Scenario 1: Throughput",
+      "type": "tab"
+    },
+    {
+      "id": "s1_inject",
+      "name": "bench-inject",
+      "type": "inject",
+      "z": "s1_tab",
+      "once": false,
+      "onceDelay": 0,
+      "payload": "benchmark-payload",
+      "payloadType": "str",
+      "repeat": "",
+      "crontab": "",
+      "props": [{ "p": "payload" }],
+      "topic": "bench/throughput",
+      "wires": [["s1_function"]]
+    },
+    {
+      "id": "s1_function",
+      "name": "pass-through",
+      "type": "function",
+      "z": "s1_tab",
+      "func": "return msg;",
+      "outputs": 1,
+      "timeout": 0,
+      "noerr": 0,
+      "initialize": "",
+      "finalize": "",
+      "libs": [],
+      "wires": [["s1_debug"]]
+    },
+    {
+      "id": "s1_debug",
+      "name": "bench-debug",
+      "type": "debug",
+      "z": "s1_tab",
+      "active": true,
+      "console": false,
+      "tosidebar": true,
+      "tostatus": false,
+      "complete": "payload",
+      "targetType": "msg",
+      "statusType": "auto",
+      "statusVal": "",
+      "wires": []
+    }
+  ]
+}

@@ -1,7 +1,9 @@
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 use async_trait::async_trait;
 use serde::Deserialize;
+use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 
 use crate::runtime::flow::Flow;
@@ -34,9 +36,11 @@ fn default_max_connections() -> usize { 100 }
 
 #[derive(Debug)]
 #[flow_node("mqtt broker embedded", red_name = "mqtt-broker-embedded", module = "node-red")]
-struct MqttBrokerEmbeddedNode {
+pub(crate) struct MqttBrokerEmbeddedNode {
     base: BaseFlowNodeState,
     config: MqttBrokerNodeConfig,
+    /// The actual address the broker bound to (populated once started).
+    pub(crate) bound_addr: Arc<RwLock<Option<SocketAddr>>>,
 }
 
 impl MqttBrokerEmbeddedNode {
@@ -50,7 +54,13 @@ impl MqttBrokerEmbeddedNode {
         Ok(Box::new(MqttBrokerEmbeddedNode {
             base: state,
             config: cfg,
+            bound_addr: Arc::new(RwLock::new(None)),
         }))
+    }
+
+    /// The configured host/port (may differ from bound_addr when port=0).
+    pub(crate) fn configured_addr(&self) -> (String, u16) {
+        (self.config.host.clone(), self.config.port)
     }
 
     fn make_event_msg(&self, topic: &str, payload: Variant) -> MsgHandle {
@@ -85,6 +95,10 @@ impl FlowNodeBehavior for MqttBrokerEmbeddedNode {
 
         match result {
             Ok(addr) => {
+                {
+                    let mut ba = self.bound_addr.write().await;
+                    *ba = Some(addr);
+                }
                 log::info!("[mqtt-broker:{}] Listening on {}", self.name(), addr);
                 self.report_status(
                     StatusObject {

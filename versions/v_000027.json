@@ -1,0 +1,217 @@
+[
+  {
+    "id": "a1b2c3d4e5f60001",
+    "label": "Modbus → PostgreSQL POC",
+    "type": "tab"
+  },
+  {
+    "host": "127.0.0.1",
+    "id": "f1e2d3c4b5a60002",
+    "name": "Local Modbus",
+    "port": 5020,
+    "timeoutMs": 5000,
+    "transport": "tcp",
+    "type": "modbus-config",
+    "unitId": 1
+  },
+  {
+    "connectTimeoutMs": 5000,
+    "dbname": "edgelinkd_poc",
+    "host": "127.0.0.1",
+    "id": "a1b2c3d4e5f60010",
+    "name": "Local PostgreSQL",
+    "password": "postgres",
+    "poolMaxSize": 5,
+    "port": 5432,
+    "type": "postgres-config",
+    "user": "postgres"
+  },
+  {
+    "address": 0,
+    "configNode": "f1e2d3c4b5a60002",
+    "dataType": "uint16",
+    "functionCode": "readHoldingRegisters",
+    "id": "a1b2c3d4e5f60020",
+    "name": "Read Sensors",
+    "pollIntervalMs": 5000,
+    "quantity": 4,
+    "type": "modbus read",
+    "wires": [
+      [
+        "a1b2c3d4e5f60030"
+      ]
+    ],
+    "x": 200,
+    "y": 200,
+    "z": "a1b2c3d4e5f60001"
+  },
+  {
+    "finalize": "",
+    "func": "// Transform Modbus register array to SQL params\nlet values = msg.payload;\n\n// Registers: [temp_x10, humidity_x10, pressure, status]\nlet temp = (values[0] || 0) / 10;\nlet humidity = (values[1] || 0) / 10;\nlet pressure = values[2] || 0;\nlet status = values[3] || 0;\n\n// Set query and params for postgres-query node\nmsg.query = \"INSERT INTO sensor_readings (temperature, humidity, pressure, status, inserted_at) VALUES ($1, $2, $3, $4, NOW())\";\nmsg.queryParams = [temp, humidity, pressure, status];\n\n// Keep original modbus data for debugging\nmsg.modbus_data = {\n    raw: values,\n    temperature: temp,\n    humidity: humidity,\n    pressure: pressure,\n    status: status\n};\n\nreturn msg;",
+    "id": "a1b2c3d4e5f60030",
+    "initialize": "",
+    "libs": [],
+    "name": "Transform to SQL",
+    "noerr": 0,
+    "outputs": 1,
+    "timeout": 0,
+    "type": "function",
+    "wires": [
+      [
+        "a1b2c3d4e5f60040"
+      ]
+    ],
+    "x": 420,
+    "y": 200,
+    "z": "a1b2c3d4e5f60001"
+  },
+  {
+    "config_node": "a1b2c3d4e5f60010",
+    "id": "a1b2c3d4e5f60040",
+    "name": "Insert to PostgreSQL",
+    "output_mode": "rows",
+    "query": "INSERT INTO sensor_readings (temperature, humidity, pressure, status, inserted_at) VALUES ($1, $2, $3, $4, NOW())",
+    "timeout_ms": 10000,
+    "type": "postgres-query",
+    "wires": [
+      [
+        "a1b2c3d4e5f60050"
+      ]
+    ],
+    "x": 680,
+    "y": 200,
+    "z": "a1b2c3d4e5f60001"
+  },
+  {
+    "active": true,
+    "complete": "true",
+    "console": true,
+    "id": "a1b2c3d4e5f60050",
+    "name": "Debug Output",
+    "statusType": "auto",
+    "statusVal": "",
+    "targetType": "full",
+    "tosidebar": true,
+    "tostatus": false,
+    "type": "debug",
+    "wires": [],
+    "x": 920,
+    "y": 280,
+    "z": "a1b2c3d4e5f60001"
+  },
+  {
+    "coilCount": 100,
+    "host": "127.0.0.1",
+    "id": "564da2962cb0c488",
+    "name": "Modbus Server",
+    "port": 5020,
+    "registerCount": 100,
+    "type": "modbus-server",
+    "wires": [
+      [
+        "8796f5ad317dba8a"
+      ]
+    ],
+    "x": 220,
+    "y": 100,
+    "z": "a1b2c3d4e5f60001"
+  },
+  {
+    "active": true,
+    "complete": "false",
+    "console": false,
+    "id": "8796f5ad317dba8a",
+    "name": "debug 1",
+    "statusType": "auto",
+    "statusVal": "",
+    "tosidebar": true,
+    "tostatus": false,
+    "type": "debug",
+    "wires": [],
+    "x": 470,
+    "y": 100,
+    "z": "a1b2c3d4e5f60001"
+  },
+  {
+    "address": 0,
+    "configNode": "f1e2d3c4b5a60002",
+    "dataType": "uint16",
+    "functionCode": "writeMultipleRegisters",
+    "id": "af7e09bf1ed0bb7c",
+    "name": "",
+    "type": "modbus write",
+    "wires": [
+      [
+        "114cab49824bf40c"
+      ]
+    ],
+    "x": 500,
+    "y": 400,
+    "z": "a1b2c3d4e5f60001"
+  },
+  {
+    "active": true,
+    "complete": "false",
+    "console": false,
+    "id": "114cab49824bf40c",
+    "name": "debug 2",
+    "statusType": "auto",
+    "statusVal": "",
+    "tosidebar": true,
+    "tostatus": false,
+    "type": "debug",
+    "wires": [],
+    "x": 680,
+    "y": 400,
+    "z": "a1b2c3d4e5f60001"
+  },
+  {
+    "crontab": "",
+    "id": "87b5a53aaf1789a6",
+    "name": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "payload": "",
+    "payloadType": "date",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "1",
+    "topic": "",
+    "type": "inject",
+    "wires": [
+      [
+        "80b283919e703c39"
+      ]
+    ],
+    "x": 170,
+    "y": 400,
+    "z": "a1b2c3d4e5f60001"
+  },
+  {
+    "finalize": "",
+    "func": "msg.payload = \n            [\n                Number((Math.random() * 10).toFixed(2)),\n                Number((Math.random() * 10).toFixed(2)),\n                Number((Math.random() * 10).toFixed(2)),\n                Number((Math.random() * 10).toFixed(2)),\n            ];\nreturn msg;",
+    "id": "80b283919e703c39",
+    "initialize": "",
+    "libs": [],
+    "name": "function 1",
+    "noerr": 0,
+    "outputs": 1,
+    "timeout": 0,
+    "type": "function",
+    "wires": [
+      [
+        "af7e09bf1ed0bb7c"
+      ]
+    ],
+    "x": 330,
+    "y": 400,
+    "z": "a1b2c3d4e5f60001"
+  }
+]
