@@ -70,7 +70,7 @@ jobs:
           cache-targets: true
           cache-on-failure: true
       - name: Cargo check
-        run: cargo check --workspace --features default --exclude rust-red-wasm-sdk --exclude rust-red-wasm-example
+        run: cargo check --workspace --features default
 
   clippy:
     name: Clippy
@@ -92,7 +92,7 @@ jobs:
           cache-targets: true
           cache-on-failure: true
       - name: Clippy
-        run: cargo clippy --workspace --features default --tests --exclude rust-red-wasm-sdk --exclude rust-red-wasm-example -- -D warnings
+        run: cargo clippy --workspace --features default --tests -- -D warnings
         continue-on-error: true
 
   test:
@@ -116,12 +116,10 @@ jobs:
         with:
           cache-targets: true
           cache-on-failure: true
-      - name: Build tests
-        run: cargo nextest run --workspace --features default --exclude rust-red-wasm-sdk --exclude rust-red-wasm-example --no-run
       - name: Run tests
-        run: cargo nextest run --workspace --features default --exclude rust-red-wasm-sdk --exclude rust-red-wasm-example
+        run: cargo nextest run --workspace --features default
       - name: Run doc tests
-        run: cargo test --workspace --features default --exclude rust-red-wasm-sdk --exclude rust-red-wasm-example --doc
+        run: cargo test --workspace --features default --doc
 
   build-release:
     name: Release Build

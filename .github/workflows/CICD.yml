@@ -69,7 +69,7 @@ jobs:
       - name: Check code formatting
         run: cargo fmt --all -- --check
       - name: Cargo check (syntax only)
-        run: cargo check --workspace --exclude rust-red-wasm-sdk --exclude rust-red-wasm-example
+        run: cargo check --workspace
 
   build-and-test-windows:
     name: Build and Test on Windows

@@ -216,14 +216,12 @@ members = [
     "crates/macro",
     "crates/web",
     "crates/wasm-host",
-    "crates/wasm-sdk",
     "crates/marketplace",
     "crates/mqtt-broker",
     "crates/cluster",
     "node-plugins/*",
-    "plugins/examples/*",
 ]
-exclude = ["crates/pymod"]
+exclude = ["crates/pymod", "crates/wasm-sdk", "plugins/examples"]
 
 [package.metadata.bundle]
 identifier = "com.github.dzulfikar08.rust-red"
