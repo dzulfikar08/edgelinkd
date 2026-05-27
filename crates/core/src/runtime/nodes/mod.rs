@@ -2,7 +2,6 @@ use std::fmt;
 use std::sync::{Arc, Weak};
 
 use async_trait::async_trait;
-use runtime::engine::Engine;
 use runtime::group::{Group, WeakGroup};
 use serde::Serialize;
 use serde::Serializer;
@@ -67,8 +66,11 @@ impl fmt::Display for NodeKind {
     }
 }
 
-type GlobalNodeFactoryFn =
-    fn(&Engine, &RedGlobalNodeConfig, Option<&config::Config>) -> crate::Result<Box<dyn GlobalNodeBehavior>>;
+type GlobalNodeFactoryFn = fn(
+    &runtime::engine::Engine,
+    &RedGlobalNodeConfig,
+    Option<&config::Config>,
+) -> crate::Result<Box<dyn GlobalNodeBehavior>>;
 
 type FlowNodeFactoryFn = fn(
     &Flow,
@@ -159,7 +161,7 @@ pub trait FlowNodeBehavior: Send + Sync + FlowsElement {
         self.get_base().envs.evalute_env(key)
     }
 
-    fn engine(&self) -> Option<Engine> {
+    fn engine(&self) -> Option<runtime::engine::Engine> {
         self.get_base().flow.upgrade()?.engine()
     }
 
