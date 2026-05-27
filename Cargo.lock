@@ -4069,20 +4069,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust-red-plugin-echo"
-version = "0.1.0"
-dependencies = [
- "rust-red-wasm-sdk",
-]
-
-[[package]]
-name = "rust-red-plugin-transform"
-version = "0.1.0"
-dependencies = [
- "rust-red-wasm-sdk",
-]
-
-[[package]]
 name = "rust-red-wasm-host"
 version = "0.1.0"
 dependencies = [
@@ -4101,14 +4087,6 @@ dependencies = [
  "tokio",
  "tokio-util",
  "wasmtime",
-]
-
-[[package]]
-name = "rust-red-wasm-sdk"
-version = "0.1.0"
-dependencies = [
- "postcard",
- "serde",
 ]
 
 [[package]]

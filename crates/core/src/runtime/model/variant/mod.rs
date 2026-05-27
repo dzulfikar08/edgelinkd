@@ -331,15 +331,9 @@ impl Variant {
             Variant::Number(n) => serde_json::Value::Number(n.clone()),
             Variant::String(s) => serde_json::Value::String(s.clone()),
             Variant::Bool(b) => serde_json::Value::Bool(*b),
-            Variant::Array(arr) => {
-                serde_json::Value::Array(arr.iter().map(|v| v.to_json_value()).collect())
-            }
+            Variant::Array(arr) => serde_json::Value::Array(arr.iter().map(|v| v.to_json_value()).collect()),
             Variant::Object(map) => {
-                serde_json::Value::Object(
-                    map.iter()
-                        .map(|(k, v)| (k.clone(), v.to_json_value()))
-                        .collect(),
-                )
+                serde_json::Value::Object(map.iter().map(|(k, v)| (k.clone(), v.to_json_value())).collect())
             }
             Variant::Bytes(b) => {
                 serde_json::Value::Array(b.iter().map(|&byte| serde_json::Value::Number(byte.into())).collect())
