@@ -1,5 +1,3 @@
-#![allow(ambiguous_glob_imports)]
-
 pub mod runtime;
 pub mod text;
 pub mod utils;

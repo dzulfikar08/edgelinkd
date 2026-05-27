@@ -41,7 +41,7 @@ permissions:
   packages: write
 
 env:
-  RUSTFLAGS: ${{ (github.ref == 'refs/heads/master' || github.base_ref == 'master') && '-Dwarnings -Aambiguous-glob-imports' || '' }}
+  RUSTFLAGS: ${{ (github.ref == 'refs/heads/master' || github.base_ref == 'master') && '-Dwarnings' || '' }}
 
 jobs:
   fmt-and-check:
