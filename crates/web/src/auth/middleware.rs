@@ -61,15 +61,17 @@ impl AuthenticatedUser {
         if self.role.has_permission(perm) {
             Ok(())
         } else {
-            Err(Box::new((
-                StatusCode::FORBIDDEN,
-                serde_json::json!({
-                    "error": "forbidden",
-                    "message": format!("Requires permission: {perm:?}")
-                })
-                .to_string(),
-            )
-                .into_response()))
+            Err(Box::new(
+                (
+                    StatusCode::FORBIDDEN,
+                    serde_json::json!({
+                        "error": "forbidden",
+                        "message": format!("Requires permission: {perm:?}")
+                    })
+                    .to_string(),
+                )
+                    .into_response(),
+            ))
         }
     }
 }

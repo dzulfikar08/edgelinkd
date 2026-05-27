@@ -68,16 +68,16 @@ async fn websocket_in_connect_mode() {
         {
             // Echo loop: read a message and send it back
             while let Some(msg) = ws_stream.next().await {
-                    match msg {
-                        Ok(tokio_tungstenite::tungstenite::Message::Text(text)) => {
-                            use futures_util::SinkExt;
-                            let _ = ws_stream.send(tokio_tungstenite::tungstenite::Message::Text(text)).await;
-                        }
-                        Ok(tokio_tungstenite::tungstenite::Message::Close(_)) => break,
-                        _ => break,
+                match msg {
+                    Ok(tokio_tungstenite::tungstenite::Message::Text(text)) => {
+                        use futures_util::SinkExt;
+                        let _ = ws_stream.send(tokio_tungstenite::tungstenite::Message::Text(text)).await;
                     }
+                    Ok(tokio_tungstenite::tungstenite::Message::Close(_)) => break,
+                    _ => break,
                 }
             }
+        }
     });
 
     let flow = json!([
